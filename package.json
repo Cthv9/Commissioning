@@ -4,8 +4,10 @@
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
+    "electron:dev": "electron .",
     "dev": "node server.js",
     "build": "electron-builder",
+    "dist": "electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
