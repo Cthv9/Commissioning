@@ -22,13 +22,17 @@
     "electron": "^32.0.1",
     "electron-builder": "^25.1.8"
   },
-  "description": "",
+  "description": "Portale Commissioning electron app",
   "build": {
     "appId": "com.portalecommissioning.app",
     "productName": "Portale Commissioning",
     "files": [
       "**/*"
     ],
+    "win": {
+      "sign": false,
+      "signAndEditExecutable": false
+    },
     "directories": {
       "output": "dist"
     }
