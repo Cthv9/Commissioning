@@ -5,123 +5,397 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestione Commissioning</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; }
+    .table td, .table th { vertical-align: middle; }
+    .text-wrap { white-space: normal; }
+  </style>
 </head>
 <body>
 
+  <!-- Header sempre visibile -->
   <div class="sticky-top bg-white border-bottom">
-    <div class="container py-2 d-flex gap-2 align-items-center">
-      <a href="index.html" class="btn btn-primary">← Nuovo commissioning</a>
-      <input id="searchInput" class="form-control" placeholder="Cerca (cantiere, barca, scafo, operatore...)">
-      <button class="btn btn-outline-secondary" onclick="loadRecords()">Aggiorna</button>
+    <div class="container-fluid py-2">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="index.html" class="btn btn-primary">← Nuovo commissioning</a>
+
+        <div class="flex-grow-1" style="min-width: 240px;">
+          <input id="searchInput" class="form-control" placeholder="Cerca (cantiere, barca, scafo, operatore...)">
+        </div>
+
+        <select id="pageSizeSelect" class="form-select" style="width: auto;">
+          <option value="25">25 / pagina</option>
+          <option value="50" selected>50 / pagina</option>
+          <option value="100">100 / pagina</option>
+        </select>
+
+        <button id="refreshBtn" class="btn btn-outline-secondary">Aggiorna</button>
+      </div>
+
+      <div class="small text-muted mt-2" id="statusLine">Caricamento...</div>
     </div>
   </div>
 
-  <div class="container py-4">
-    <h1>Gestione Commissioning</h1>
+  <div class="container-fluid my-3">
+    <h1 class="h4 mb-3">Gestione Commissioning</h1>
 
-    <!-- Tabella per visualizzare i record -->
-    <table class="table table-bordered mt-3" id="recordsTable">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Cantiere</th>
-          <th>Nome Barca</th>
-          <th>Numero Scafo</th>
-          <th>Matricola</th>
-          <th>Tipo</th>
-          <th>Operatore</th>
-          <th>Data Inserimento</th>
-          <th>Azioni</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover bg-white" id="recordsTable">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 70px;">ID</th>
+            <th>Cantiere</th>
+            <th>Nome Barca</th>
+            <th>Numero Scafo</th>
+            <th>Matricola</th>
+            <th>Tipo</th>
+            <th>Operatore</th>
+            <th style="width: 180px;">Data Inserimento</th>
+            <th style="width: 170px;">Azioni</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-    <!-- Pulsante per tornare alla pagina principale -->
-    <a href="index.html" class="btn btn-primary mt-3">Torna a Nuovo Commissioning</a>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+      <div class="small text-muted" id="pageInfo"></div>
+
+      <nav aria-label="Paginazione">
+        <ul class="pagination mb-0" id="pagination"></ul>
+      </nav>
+    </div>
   </div>
 
-    <script>
-    let allRecords = [];
+  <!-- Modal modifica record -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Modifica commissioning</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+        </div>
 
-    function render(records) {
+        <div class="modal-body">
+          <form id="editForm">
+            <div class="row g-3">
+              <div class="col-md-2">
+                <label class="form-label">ID</label>
+                <input id="editID" class="form-control" readonly>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Data inserimento</label>
+                <input id="editData" class="form-control" readonly>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Cantiere</label>
+                <input id="editCantiere" class="form-control">
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Nome barca</label>
+                <input id="editNomeBarca" class="form-control">
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Numero scafo</label>
+                <input id="editNumeroScafo" class="form-control">
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Matricola</label>
+                <input id="editMatricola" class="form-control">
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Tipo</label>
+                <input id="editTipo" class="form-control">
+              </div>
+
+              <div class="col-md-8">
+                <label class="form-label">Operatore</label>
+                <input id="editOperatore" class="form-control">
+              </div>
+            </div>
+          </form>
+
+          <div class="alert alert-danger d-none mt-3" id="editError"></div>
+          <div class="alert alert-success d-none mt-3" id="editSuccess">Salvato!</div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+          <button type="button" class="btn btn-primary" id="saveEditBtn">Salva</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    let allRecords = [];
+    let filteredRecords = [];
+
+    let currentPage = 1;
+    let pageSize = 50;
+
+    let currentEditId = null;
+    let editModalInstance = null;
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function clamp(n, min, max) {
+      return Math.min(Math.max(n, min), max);
+    }
+
+    function setStatus(text) {
+      document.getElementById('statusLine').textContent = text;
+    }
+
+    function applyFilter(resetPage = false) {
+      const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+
+      if (!q) {
+        filteredRecords = [...allRecords];
+      } else {
+        filteredRecords = allRecords.filter(r => {
+          const haystack = [
+            r.ID,
+            r.Cantiere,
+            r['Nome Barca'],
+            r['Numero Scafo'],
+            r.Matricola,
+            r.Tipo,
+            r.Operatore,
+            r['Data e Ora Inserimento'],
+          ].join(' ').toLowerCase();
+          return haystack.includes(q);
+        });
+      }
+
+      if (resetPage) currentPage = 1;
+      render();
+    }
+
+    function renderTable(records) {
       const tableBody = document.querySelector('#recordsTable tbody');
       tableBody.innerHTML = records.map(record => `
         <tr>
-          <td>${record.ID ?? ''}</td>
-          <td>${record.Cantiere ?? ''}</td>
-          <td>${record['Nome Barca'] ?? ''}</td>
-          <td>${record['Numero Scafo'] ?? ''}</td>
-          <td>${record.Matricola ?? ''}</td>
-          <td>${record.Tipo ?? ''}</td>
-          <td>${record.Operatore ?? ''}</td>
-          <td>${record['Data e Ora Inserimento'] ?? ''}</td>
+          <td>${escapeHtml(record.ID)}</td>
+          <td class="text-wrap">${escapeHtml(record.Cantiere)}</td>
+          <td class="text-wrap">${escapeHtml(record['Nome Barca'])}</td>
+          <td>${escapeHtml(record['Numero Scafo'])}</td>
+          <td>${escapeHtml(record.Matricola)}</td>
+          <td>${escapeHtml(record.Tipo)}</td>
+          <td>${escapeHtml(record.Operatore)}</td>
+          <td>${escapeHtml(record['Data e Ora Inserimento'])}</td>
           <td>
-            <button class="btn btn-warning btn-sm" onclick="editRecord(${record.ID})">Modifica</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteRecord(${record.ID})">Elimina</button>
+            <div class="d-flex gap-2">
+              <button class="btn btn-warning btn-sm" onclick="openEdit(${record.ID})">Modifica</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteRecord(${record.ID})">Elimina</button>
+            </div>
           </td>
         </tr>
       `).join('');
     }
 
-    function applyFilter() {
-      const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
-      if (!q) {
-        render(allRecords);
-        return;
-      }
+    function makePageItem(label, page, disabled = false, active = false) {
+      const li = document.createElement('li');
+      li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
 
-      const filtered = allRecords.filter(r => {
-        const haystack = [
-          r.ID,
-          r.Cantiere,
-          r['Nome Barca'],
-          r['Numero Scafo'],
-          r.Matricola,
-          r.Tipo,
-          r.Operatore,
-          r['Data e Ora Inserimento'],
-        ].join(' ').toLowerCase();
-        return haystack.includes(q);
+      const a = document.createElement('a');
+      a.className = 'page-link';
+      a.href = '#';
+      a.textContent = label;
+
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (disabled) return;
+        currentPage = page;
+        render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
-      render(filtered);
+      li.appendChild(a);
+      return li;
+    }
+
+    function renderPagination(totalPages) {
+      const ul = document.getElementById('pagination');
+      ul.innerHTML = '';
+
+      // Prev
+      ul.appendChild(makePageItem('‹', currentPage - 1, currentPage === 1));
+
+      // Pages (compact)
+      const maxButtons = 7;
+      if (totalPages <= maxButtons) {
+        for (let p = 1; p <= totalPages; p++) {
+          ul.appendChild(makePageItem(String(p), p, false, p === currentPage));
+        }
+      } else {
+        const pages = new Set([1, 2, totalPages, totalPages - 1, currentPage, currentPage - 1, currentPage + 1]);
+        const sorted = [...pages].filter(p => p >= 1 && p <= totalPages).sort((a,b) => a - b);
+
+        let last = 0;
+        for (const p of sorted) {
+          if (p - last > 1) {
+            const ell = document.createElement('li');
+            ell.className = 'page-item disabled';
+            ell.innerHTML = '<span class="page-link">…</span>';
+            ul.appendChild(ell);
+          }
+          ul.appendChild(makePageItem(String(p), p, false, p === currentPage));
+          last = p;
+        }
+      }
+
+      // Next
+      ul.appendChild(makePageItem('›', currentPage + 1, currentPage === totalPages));
+    }
+
+    function render() {
+      const total = filteredRecords.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      currentPage = clamp(currentPage, 1, totalPages);
+
+      const start = (currentPage - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+      const pageSlice = filteredRecords.slice(start, end);
+
+      renderTable(pageSlice);
+      renderPagination(totalPages);
+
+      const pageInfo = document.getElementById('pageInfo');
+      pageInfo.textContent = total === 0
+        ? 'Nessun record'
+        : `Mostrando ${start + 1}–${end} di ${total}`;
+
+      setStatus(`Totale record: ${allRecords.length} • Filtrati: ${filteredRecords.length}`);
     }
 
     async function loadRecords() {
+      setStatus('Caricamento record...');
       const response = await fetch('/records');
       allRecords = await response.json();
 
-      // Ultimi inseriti in alto
+      // Ultimi inseriti in alto (se ID è progressivo)
       allRecords.sort((a, b) => (b.ID ?? 0) - (a.ID ?? 0));
 
-      applyFilter();
+      applyFilter(true);
     }
 
-    async function editRecord(id) {
-      const newName = prompt('Inserisci il nuovo nome della barca:');
-      if (!newName) return;
+    function openEdit(id) {
+      const record = allRecords.find(r => r.ID == id);
+      if (!record) return;
 
-      await fetch(`/records/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 'Nome Barca': newName })
-      });
+      currentEditId = id;
 
-      loadRecords();
+      document.getElementById('editID').value = record.ID ?? '';
+      document.getElementById('editData').value = record['Data e Ora Inserimento'] ?? '';
+
+      document.getElementById('editCantiere').value = record.Cantiere ?? '';
+      document.getElementById('editNomeBarca').value = record['Nome Barca'] ?? '';
+      document.getElementById('editNumeroScafo').value = record['Numero Scafo'] ?? '';
+      document.getElementById('editMatricola').value = record.Matricola ?? '';
+      document.getElementById('editTipo').value = record.Tipo ?? '';
+      document.getElementById('editOperatore').value = record.Operatore ?? '';
+
+      document.getElementById('editError').classList.add('d-none');
+      document.getElementById('editSuccess').classList.add('d-none');
+
+      if (!editModalInstance) {
+        editModalInstance = new bootstrap.Modal(document.getElementById('editModal'));
+      }
+      editModalInstance.show();
+    }
+
+    async function saveEdit() {
+      if (currentEditId == null) return;
+
+      const btn = document.getElementById('saveEditBtn');
+      btn.disabled = true;
+
+      const err = document.getElementById('editError');
+      const ok = document.getElementById('editSuccess');
+      err.classList.add('d-none');
+      ok.classList.add('d-none');
+
+      const payload = {
+        "Cantiere": document.getElementById('editCantiere').value.trim(),
+        "Nome Barca": document.getElementById('editNomeBarca').value.trim(),
+        "Numero Scafo": document.getElementById('editNumeroScafo').value.trim(),
+        "Matricola": document.getElementById('editMatricola').value.trim(),
+        "Tipo": document.getElementById('editTipo').value.trim(),
+        "Operatore": document.getElementById('editOperatore').value.trim(),
+      };
+
+      try {
+        const res = await fetch(`/records/${currentEditId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Errore durante il salvataggio');
+        }
+
+        ok.classList.remove('d-none');
+
+        // aggiorna lista mantenendo filtro/pagina
+        const prevPage = currentPage;
+        const prevQuery = document.getElementById('searchInput').value;
+        await loadRecords();
+        document.getElementById('searchInput').value = prevQuery;
+        currentPage = prevPage;
+        applyFilter(false);
+
+        // chiudi dopo un attimo
+        setTimeout(() => editModalInstance?.hide(), 350);
+      } catch (e) {
+        err.textContent = e.message || String(e);
+        err.classList.remove('d-none');
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     async function deleteRecord(id) {
       if (!confirm('Sei sicuro di voler eliminare questo record?')) return;
 
       await fetch(`/records/${id}`, { method: 'DELETE' });
-      loadRecords();
+
+      // dopo delete, ricarica e se serve torna a pagina valida
+      await loadRecords();
     }
 
-    document.addEventListener('input', (e) => {
-      if (e.target && e.target.id === 'searchInput') applyFilter();
+    // Eventi UI
+    document.getElementById('refreshBtn').addEventListener('click', () => loadRecords());
+
+    document.getElementById('searchInput').addEventListener('input', () => applyFilter(true));
+
+    document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+      pageSize = parseInt(e.target.value, 10) || 50;
+      currentPage = 1;
+      render();
     });
 
+    document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
+
+    // Avvio
     loadRecords();
   </script>
 </body>

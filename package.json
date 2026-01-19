@@ -31,6 +31,12 @@
     ],
     "directories": {
       "output": "dist"
+    },
+    "forceCodeSigning": false,
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false,
+      "verifyUpdateCodeSignature": false
     }
   }
 }

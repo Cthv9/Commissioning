@@ -47,7 +47,7 @@ function waitForServer(url, attempts = 30, delayMs = 500) {
 }
 
 function createWindow() {
-  // Rimuove il menu di default (File / Help) e rende l'app piu' "native"
+  // Remove the default menu ("File", "Help", ...) so the app feels native
   Menu.setApplicationMenu(null);
 
   const mainWindow = new BrowserWindow({
@@ -65,13 +65,12 @@ function createWindow() {
 
   mainWindow.setMenuBarVisibility(false);
 
-  mainWindow.loadURL('http://localhost:3000/index.html');
-
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
-}
 
+  mainWindow.loadURL('http://localhost:3000/index.html');
+}
 
 app.whenReady().then(async () => {
   startServer();
