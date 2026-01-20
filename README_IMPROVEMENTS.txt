@@ -8,6 +8,7 @@ Modifiche incluse:
   - campo ricerca live (filtra la tabella)
   - pulsante Aggiorna
   - record ordinati per ID decrescente (piu' recenti in alto)
+ - \AppData\Roaming\portale-commissioning\backup
 
 ## Avvio
 npm install --include=dev
