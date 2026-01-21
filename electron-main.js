@@ -1,15 +1,27 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const { spawn } = require('child_process');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 
 let serverProcess;
 
+// Dialog nativo per scegliere cartelle (utile su PC aziendali senza Dev Mode)
+ipcMain.handle('df:select-directory', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
+
+
 function startServer() {
   const serverPath = path.join(__dirname, 'server.js');
+    const backupDir = path.join(app.getPath('userData'), 'backup');
 
   serverProcess = spawn(process.execPath, [serverPath], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', PORTALE_BACKUP_DIR: backupDir },
     stdio: 'inherit',
   });
 
@@ -57,9 +69,11 @@ function createWindow() {
     minHeight: 650,
     useContentSize: true,
     autoHideMenuBar: true,
+    icon: path.join(__dirname, "build", "icon.ico"),
     show: false,
     webPreferences: {
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 

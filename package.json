@@ -8,7 +8,9 @@
     "dev": "node server.js",
     "build": "electron-builder",
     "dist": "electron-builder",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "rebuild:excel": "node rebuild_excel.js",
+    "import:df": "node import_df.js"
   },
   "keywords": [],
   "author": "",
@@ -22,7 +24,7 @@
     "electron": "^32.0.1",
     "electron-builder": "^25.1.8"
   },
-  "description": "",
+  "description": "Portale Commissioning (Electron)",
   "build": {
     "appId": "com.portalecommissioning.app",
     "productName": "Portale Commissioning",
@@ -30,13 +32,29 @@
       "**/*"
     ],
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "forceCodeSigning": false,
     "win": {
       "target": "nsis",
       "signAndEditExecutable": false,
-      "verifyUpdateCodeSignature": false
+      "verifyUpdateCodeSignature": false,
+      "icon": "build/icon.ico"
+    },
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "build/icon.ico"
+      }
+    ],
+    "nsis": {
+      "include": "build/installer.nsh",
+      "createDesktopShortcut": false,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createStartMenuShortcut": false
     }
   }
 }
