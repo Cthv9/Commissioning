@@ -5,6 +5,14 @@ const path = require('path');
 const fs = require('fs');
 
 let serverProcess;
+const appId = 'com.portalecommissioning.app';
+
+function getAppIconPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'build', 'icon.ico');
+  }
+  return path.join(__dirname, 'build', 'icon.ico');
+}
 
 // Dialog nativo per scegliere cartelle (utile su PC aziendali senza Dev Mode)
 ipcMain.handle('df:select-directory', async () => {
@@ -62,6 +70,7 @@ function createWindow() {
   // Remove the default menu ("File", "Help", ...) so the app feels native
   Menu.setApplicationMenu(null);
 
+  const iconPath = getAppIconPath();
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -69,7 +78,7 @@ function createWindow() {
     minHeight: 650,
     useContentSize: true,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, "build", "icon.ico"),
+    icon: iconPath,
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -87,6 +96,9 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(appId);
+  }
   startServer();
   try {
     await waitForServer('http://localhost:3000/index.html');
