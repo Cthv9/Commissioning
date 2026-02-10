@@ -92,7 +92,7 @@ function createWindow() {
     mainWindow.show();
   });
 
-  mainWindow.loadURL('http://localhost:3000/index.html');
+  mainWindow.loadURL('http://127.0.0.1:3000/index.html');
 }
 
 app.whenReady().then(async () => {
@@ -101,7 +101,7 @@ app.whenReady().then(async () => {
   }
   startServer();
   try {
-    await waitForServer('http://localhost:3000/index.html');
+    await waitForServer('http://127.0.0.1:3000/index.html');
   } catch (error) {
     console.error(error);
   }

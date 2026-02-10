@@ -729,6 +729,6 @@ app.post('/admin/rebuild-excel', (req, res) => {
 
 app.use(express.static(__dirname));
 
-app.listen(3000, () => {
-  console.log('Server avviato sulla porta 3000 - http://commissioning.local:3000/ - http://localhost:3000/index.html');
+app.listen(3000, '127.0.0.1', () => {
+  console.log('Server avviato su http://127.0.0.1:3000/index.html');
 });
