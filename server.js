@@ -71,6 +71,7 @@ function saveSettings(partial) {
     next.uploadsRootDirHistory = hist.slice(-10); // max 10
   }
 
+  ensureDir(backupDir);
   fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2), 'utf8');
   try {
     const st = fs.statSync(settingsPath);

@@ -58,7 +58,10 @@ async function dfChooseDir() {
   } catch (e) { console.warn('select_directory failed:', e); }
   if (!dir) return;
   const inp = document.getElementById('dfUploadsRootDir');
-  if (inp) inp.value = dir;
+  if (inp) {
+    inp.value = dir;
+    await dfSaveDir();
+  }
 }
 
 async function dfSaveDir() {
@@ -70,7 +73,8 @@ async function dfSaveDir() {
   }
   try {
     await dfSaveUploadsRootDir(dir);
-    alert('Destinazione caricamenti aggiornata.');
+    const modalEl = document.getElementById('dfInfoModal');
+    if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
   } catch (e) {
     alert(e.message || 'Errore salvataggio.');
   }
