@@ -1,12 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
-use tauri_plugin_shell::ShellExt;
 
-struct SidecarHandle(Arc<Mutex<Option<tauri_plugin_shell::process::CommandChild>>>);
+// Handle al processo server per terminarlo alla chiusura (solo produzione)
+struct ServerProcess(Mutex<Option<std::process::Child>>);
 
 #[tauri::command]
 fn select_directory(app: AppHandle) -> Option<String> {
@@ -14,38 +14,43 @@ fn select_directory(app: AppHandle) -> Option<String> {
         .file()
         .set_can_create_directories(true)
         .blocking_pick_folder()
-        .map(|p| p.to_string_lossy().to_string())
+        .map(|p| p.to_string())
 }
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(SidecarHandle(Arc::new(Mutex::new(None))))
+        .manage(ServerProcess(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![select_directory])
         .setup(|app| {
-            // Percorso backup identico a Electron: %APPDATA%\Portale Commissioning\backup
-            // (Electron usa productName come nome della cartella userData)
-            let backup_dir = {
+            // In PRODUZIONE: avvia server.exe dalla resource directory
+            // In DEV: il server è già avviato da beforeDevCommand (node server.js)
+            #[cfg(not(dev))]
+            {
                 let appdata = std::env::var("APPDATA").unwrap_or_default();
-                format!("{}\\Portale Commissioning\\backup", appdata)
-            };
+                let backup_dir = format!("{}\\Portale Commissioning\\backup", appdata);
 
-            // Avvia server.exe come sidecar con PORTALE_BACKUP_DIR
-            let (_, child) = app
-                .shell()
-                .sidecar("server")
-                .expect("sidecar 'server' non trovato nei bundle resources")
-                .env("PORTALE_BACKUP_DIR", &backup_dir)
-                .spawn()
-                .expect("Impossibile avviare il processo server");
+                let server_path = app
+                    .path()
+                    .resource_dir()
+                    .expect("resource dir non trovata")
+                    .join("server.exe");
 
-            *app.state::<SidecarHandle>().0.lock().unwrap() = Some(child);
+                let mut cmd = std::process::Command::new(&server_path);
+                cmd.env("PORTALE_BACKUP_DIR", &backup_dir);
+                #[cfg(target_os = "windows")]
+                {
+                    use std::os::windows::process::CommandExt;
+                    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                }
+                let child = cmd.spawn().expect("Impossibile avviare server.exe");
 
-            // Attende che il server sia pronto, poi crea la finestra
+                *app.state::<ServerProcess>().0.lock().unwrap() = Some(child);
+            }
+
+            // Attende che il server sia pronto su porta 3000, poi crea la finestra
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
-                // Poll TCP port 3000: 30 tentativi x 500ms = 15s timeout massimo
                 let mut ready = false;
                 for _ in 0..30u32 {
                     if std::net::TcpStream::connect("127.0.0.1:3000").is_ok() {
@@ -81,9 +86,9 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Termina il sidecar quando la finestra viene chiusa
+            // Termina server.exe quando la finestra viene distrutta (solo produzione)
             if let tauri::WindowEvent::Destroyed = event {
-                if let Some(state) = window.app_handle().try_state::<SidecarHandle>() {
+                if let Some(state) = window.app_handle().try_state::<ServerProcess>() {
                     if let Ok(mut guard) = state.0.lock() {
                         if let Some(mut child) = guard.take() {
                             let _ = child.kill();
