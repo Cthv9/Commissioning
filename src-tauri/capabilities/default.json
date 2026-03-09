@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capabilities",
+  "identifier": "default",
+  "description": "Permessi default Portale Commissioning",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [{ "name": "server", "sidecar": true }]
+    }
+  ]
+}

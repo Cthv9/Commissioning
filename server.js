@@ -727,7 +727,8 @@ app.post('/admin/rebuild-excel', (req, res) => {
   res.json({ ok: true, message: 'Excel ricostruito dal backup', rows: baseRecords.length });
 });
 
-app.use(express.static(__dirname));
+const staticDir = process.pkg ? path.dirname(process.execPath) : __dirname;
+app.use(express.static(staticDir));
 
 app.listen(3000, '127.0.0.1', () => {
   console.log('Server avviato su http://127.0.0.1:3000/index.html');

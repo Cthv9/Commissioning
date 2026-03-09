@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Portale Commissioning",
+  "version": "2.0.0",
+  "identifier": "com.portalecommissioning.app",
+  "build": {
+    "beforeDevCommand": "node server.js",
+    "devUrl": "http://127.0.0.1:3000/index.html",
+    "frontendDist": "../server-dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    },
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": ["../server-dist/server"],
+    "resources": {
+      "../server-dist/index.html": ".",
+      "../server-dist/manage.html": ".",
+      "../server-dist/script.js": ".",
+      "../server-dist/ui-common.js": "."
+    },
+    "windows": {
+      "nsis": {
+        "installerIcon": "../build/icon.ico",
+        "installMode": "currentUser",
+        "shortcutName": "Portale Commissioning",
+        "createDesktopShortcut": false,
+        "createStartMenuShortcut": false,
+        "preinstallSection": "; Disinstalla silenziosamente la versione Electron precedente\n  Push $0\n  Push $1\n  Push $2\n  Push $3\n  Push $4\n  StrCpy $4 \"Portale Commissioning\"\n  StrCpy $0 0\n  loop_hkcu:\n    EnumRegKey $1 HKCU \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\" $0\n    StrCmp $1 \"\" done_hkcu\n    ReadRegStr $2 HKCU \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$1\" \"DisplayName\"\n    StrCmp $2 $4 found_hkcu\n    IntOp $0 $0 + 1\n    Goto loop_hkcu\n  found_hkcu:\n    ReadRegStr $3 HKCU \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$1\" \"UninstallString\"\n    StrCmp $3 \"\" done_hkcu\n    ExecWait '$3 /S'\n  done_hkcu:\n  Pop $4\n  Pop $3\n  Pop $2\n  Pop $1\n  Pop $0"
+      }
+    }
+  }
+}
