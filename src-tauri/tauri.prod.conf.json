@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "resources": {
+      "dist/server.exe": "server.exe",
+      "dist/index.html": "index.html",
+      "dist/manage.html": "manage.html",
+      "dist/script.js": "script.js",
+      "dist/ui-common.js": "ui-common.js"
+    }
+  }
+}

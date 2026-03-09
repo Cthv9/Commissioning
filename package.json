@@ -1,14 +1,14 @@
 {
   "name": "portale-commissioning",
-  "version": "1.0.0",
-  "main": "electron-main.js",
+  "version": "2.0.0",
+  "description": "Portale Commissioning",
   "scripts": {
-    "start": "electron .",
-    "electron:dev": "electron .",
-    "dev": "node server.js",
-    "build": "electron-builder",
-    "dist": "electron-builder",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:server": "node server.js",
+    "pkg:server": "pkg server.js --targets node18-win-x64 --output server-dist/server.exe",
+    "build:sidecar": "node scripts/build-sidecar.js",
+    "tauri": "node scripts/tauri-wrapper.js",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "npm run pkg:server && npm run build:sidecar && tauri build --config src-tauri/tauri.prod.conf.json",
     "rebuild:excel": "node rebuild_excel.js",
     "import:df": "node import_df.js"
   },
@@ -21,40 +21,14 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "electron": "^32.0.1",
-    "electron-builder": "^25.1.8"
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/cli": "^2",
+    "pkg": "^5.8.1"
   },
-  "description": "Portale Commissioning (Electron)",
-  "build": {
-    "appId": "com.portalecommissioning.app",
-    "productName": "Portale Commissioning",
-    "files": [
-      "**/*"
-    ],
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "forceCodeSigning": false,
-    "win": {
-      "target": "nsis",
-      "signAndEditExecutable": false,
-      "verifyUpdateCodeSignature": false,
-      "icon": "build/icon.ico"
-    },
-    "extraResources": [
-      {
-        "from": "build/icon.ico",
-        "to": "build/icon.ico"
-      }
-    ],
-    "nsis": {
-      "include": "build/installer.nsh",
-      "createDesktopShortcut": false,
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "perMachine": false,
-      "createStartMenuShortcut": false
-    }
+  "pkg": {
+    "scripts": "server.js",
+    "assets": ["package.json"],
+    "targets": ["node18-win-x64"],
+    "outputPath": "server-dist"
   }
 }

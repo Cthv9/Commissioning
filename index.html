@@ -11,7 +11,7 @@
   <style>body {
   background-color: #f8f9fa;
   min-height: 100vh;
-  padding: 24px;
+  padding: 12px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -20,25 +20,22 @@
 
 .container {
   background-color: white;
-  padding: 40px;
+  padding: 20px 28px;
   border-radius: 15px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  width: min(600px, 100%);
+  width: min(680px, 100%);
 }
 
 @media (max-width: 576px) {
-  body { padding: 12px; }
-  .container { padding: 20px; }
+  body { padding: 8px; }
+  .container { padding: 16px; }
 }
 
 h1 {
   text-align: center;
   color: #495057;
-  margin-bottom: 30px;
-}
-
-.btn {
-  width: 100%;
+  margin-bottom: 16px;
+  font-size: 1.4rem;
 }
 </style>
 </head>
@@ -53,57 +50,62 @@ h1 {
     <h1>Inserisci nuovo commissioning</h1>
 
     <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="POST">
-      <div class="mb-3">
-        <label for="cantiere" class="form-label">Cantiere Costruttore (Obbligatorio):</label>
-        <input type="text" class="form-control" id="cantiere" name="cantiere" list="cantiereList" autocomplete="off" required>
-        <datalist id="cantiereList"></datalist>
-        <div class="form-text">Suggerimenti automatici dai commissioning già inseriti (riduce refusi).</div>
+      <div class="row g-2 mb-2">
+        <div class="col-7">
+          <label for="cantiere" class="form-label mb-1">Cantiere Costruttore <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="cantiere" name="cantiere" list="cantiereList" autocomplete="off" required>
+          <datalist id="cantiereList"></datalist>
+          <div class="form-text" style="font-size:0.75rem;">Suggerimenti automatici (riduce refusi)</div>
+        </div>
+        <div class="col-5">
+          <label for="nomeBarca" class="form-label mb-1">Nome Barca <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="nomeBarca" name="nomeBarca" required>
+        </div>
       </div>
 
-      <div class="mb-3">
-        <label for="nomeBarca" class="form-label">Nome Barca (Obbligatorio):</label>
-        <input type="text" class="form-control" id="nomeBarca" name="nomeBarca" required>
+      <div class="row g-2 mb-2">
+        <div class="col-5">
+          <label for="numeroScafo" class="form-label mb-1">Numero Scafo <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="numeroScafo" name="numeroScafo" required>
+        </div>
+        <div class="col-4">
+          <label for="matricola" class="form-label mb-1">Matricola</label>
+          <input type="text" class="form-control form-control-sm" id="matricola" name="matricola">
+        </div>
+        <div class="col-3">
+          <label for="tipo" class="form-label mb-1">Tipo <span class="text-danger">*</span></label>
+          <select class="form-select form-select-sm" id="tipo" name="tipo" required>
+            <option value="Primo Avviamento">Primo Avviamento</option>
+            <option value="Primo Commissioning">Primo Commissioning</option>
+            <option value="Commissioning">Commissioning</option>
+          </select>
+        </div>
       </div>
 
-      <div class="mb-3">
-        <label for="numeroScafo" class="form-label">Numero Scafo (Obbligatorio):</label>
-        <input type="text" class="form-control" id="numeroScafo" name="numeroScafo" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="matricola" class="form-label">Matricola (Facoltativa):</label>
-        <input type="text" class="form-control" id="matricola" name="matricola">
-      </div>
-
-      <div class="mb-3">
-        <label for="tipo" class="form-label">Tipo:</label>
-        <select class="form-select" id="tipo" name="tipo" required>
-          <option value="Primo Avviamento">Primo Avviamento</option>
-          <option value="Primo Commissioning">Primo Commissioning</option>
-          <option value="Commissioning">Commissioning</option>
-        </select>
-      </div>
-
-      <div class="mb-3">
-        <label for="operatore" class="form-label">Operatore (Obbligatorio):</label>
-        <input type="text" class="form-control" id="operatore" name="operatore" list="operatoreList" autocomplete="off" required>
+      <div class="mb-2">
+        <label for="operatore" class="form-label mb-1">Operatore <span class="text-danger">*</span></label>
+        <input type="text" class="form-control form-control-sm" id="operatore" name="operatore" list="operatoreList" autocomplete="off" required>
         <datalist id="operatoreList"></datalist>
       </div>
 
-      <div class="mb-3">
-        <label for="fileInput" class="form-label">Carica file: (Obbligatorio)</label>
-        <input type="file" class="form-control" id="fileInput" name="files[]" multiple required>
+      <div class="mb-2">
+        <label for="fileInput" class="form-label mb-1">Carica file <span class="text-danger">*</span></label>
+        <input type="file" class="form-control form-control-sm" id="fileInput" name="files[]" multiple required>
       </div>
 
-      <div class="progress mt-3">
+      <div class="progress mb-2" style="height:18px;">
         <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
       </div>
 
-      <button type="submit" class="btn btn-primary mt-3">Invia</button>
+      <div class="row g-2">
+        <div class="col-6">
+          <button type="submit" class="btn btn-primary btn-sm w-100">Invia</button>
+        </div>
+        <div class="col-6">
+          <a href="manage.html" class="btn btn-secondary btn-sm w-100">Archivio Commissioning</a>
+        </div>
+      </div>
     </form>
-
-    <!-- Pulsante per andare alla pagina di archivio -->
-    <a href="manage.html" class="btn btn-secondary mt-3">Archivio Commissioning</a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>

@@ -50,8 +50,12 @@ async function dfOpenInfoModal() {
 }
 
 async function dfChooseDir() {
-  if (!window.DF || !window.DF.selectDirectory) return;
-  const dir = await window.DF.selectDirectory();
+  let dir = null;
+  try {
+    if (window.__TAURI__ && window.__TAURI__.core) {
+      dir = await window.__TAURI__.core.invoke('select_directory');
+    }
+  } catch (e) { console.warn('select_directory failed:', e); }
   if (!dir) return;
   const inp = document.getElementById('dfUploadsRootDir');
   if (inp) inp.value = dir;
@@ -82,7 +86,8 @@ function dfWireInfoButtons() {
 
   const chooseBtn = document.getElementById('dfChooseDirBtn');
   if (chooseBtn) {
-    if (window.DF && window.DF.selectDirectory) {
+    const hasTauri = !!(window.__TAURI__ && window.__TAURI__.core);
+    if (hasTauri) {
       chooseBtn.classList.remove('d-none');
       chooseBtn.addEventListener('click', dfChooseDir);
     } else {
