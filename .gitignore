@@ -1,9 +1,20 @@
+# Dipendenze Node.js
+/node_modules
+
+# Output build Tauri (sidecar compilato + file frontend copiati)
+/server-dist
+
+# Artefatti build Rust/Tauri
+/src-tauri/target
+
+# Output installer Electron (legacy)
+/dist
+
+# File locali/temporanei
 /_New
 /_Old
-/node_modules
 Portale garanzia.zip
 Portale.url
 Readme.txt
 start_server - Copia.bat
 start_server.bat
-/dist
