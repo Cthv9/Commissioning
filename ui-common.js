@@ -51,11 +51,17 @@ async function dfOpenInfoModal() {
 
 async function dfChooseDir() {
   let dir = null;
+  if (!window.__TAURI__ || !window.__TAURI__.core) {
+    alert('Selezione cartella non disponibile fuori dall\'app Tauri.');
+    return;
+  }
   try {
-    if (window.__TAURI__ && window.__TAURI__.core) {
-      dir = await window.__TAURI__.core.invoke('select_directory');
-    }
-  } catch (e) { console.warn('select_directory failed:', e); }
+    dir = await window.__TAURI__.core.invoke('select_directory');
+  } catch (e) {
+    console.warn('select_directory failed:', e);
+    alert('Impossibile aprire il selettore cartelle. Riprova o inserisci il percorso manualmente.');
+    return;
+  }
   if (!dir) return;
   const inp = document.getElementById('dfUploadsRootDir');
   if (inp) {
