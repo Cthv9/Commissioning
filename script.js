@@ -145,6 +145,9 @@ document.getElementById('uploadForm').addEventListener('submit', async (event) =
 
     xhr.onerror = () => {
       submitButton.disabled = false;
+      progressBar.style.width = '0%';
+      progressBar.innerText = '0%';
+      progressBar.setAttribute('aria-valuenow', '0');
       alert('Errore di rete.');
     };
 

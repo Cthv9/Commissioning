@@ -271,7 +271,9 @@ function persistBackup(action, recordOrInfo, fullRecords) {
   }
 
   ensureDir(backupDir);
-  fs.writeFileSync(backupFiles.snapshot, JSON.stringify(fullRecords, null, 2), 'utf-8');
+  const tmpSnapshot = backupFiles.snapshot + '.tmp';
+  fs.writeFileSync(tmpSnapshot, JSON.stringify(fullRecords, null, 2), 'utf-8');
+  fs.renameSync(tmpSnapshot, backupFiles.snapshot);
 
   // Copia Excel per sicurezza (se esiste)
   try {
@@ -579,7 +581,13 @@ app.put('/records/:id', (req, res) => {
   if (recordIndex === -1) return res.status(404).json({ error: 'Record non trovato' });
 
   const oldRecord = baseRecords[recordIndex];
-  const updated = { ...oldRecord, ...req.body };
+
+  // Applica solo i campi modificabili — impedisce che req.body sovrascriva ID o Data
+  const EDITABLE_FIELDS = ['Cantiere', 'Nome Barca', 'Numero Scafo', 'Matricola', 'Tipo', 'Operatore'];
+  const updated = { ...oldRecord };
+  for (const key of EDITABLE_FIELDS) {
+    if (key in req.body) updated[key] = String(req.body[key] ?? '').trim();
+  }
 
   // Normalizza cantiere/operatore/tipo in base a valori esistenti
   const existingCantieri = new Set(baseRecords.map(r => r.Cantiere));
@@ -744,21 +752,29 @@ app.post('/records/:id/open-folder', (req, res) => {
  * Ricostruisci Excel dal backup (snapshot).
  * ATTENZIONE: sovrascrive Barche_Commissionate.xlsx
  */
+let rebuildingExcel = false;
 app.post('/admin/rebuild-excel', (req, res) => {
-  const snapshot = readSnapshot();
-  if (!snapshot || snapshot.length === 0) {
-    return res.status(400).json({ error: 'Backup snapshot non disponibile o vuoto' });
+  if (rebuildingExcel) {
+    return res.status(409).json({ error: 'Ricostruzione già in corso, attendere.' });
   }
+  rebuildingExcel = true;
+  try {
+    const snapshot = readSnapshot();
+    if (!snapshot || snapshot.length === 0) {
+      return res.status(400).json({ error: 'Backup snapshot non disponibile o vuoto' });
+    }
 
-  // Scrive solo le colonne base
-  const baseRecords = snapshot.map(r => {
-    const out = {};
-    for (const h of BASE_HEADERS) out[h] = r[h] ?? '';
-    return out;
-  });
+    const baseRecords = snapshot.map(r => {
+      const out = {};
+      for (const h of BASE_HEADERS) out[h] = r[h] ?? '';
+      return out;
+    });
 
-  writeExcel(baseRecords);
-  res.json({ ok: true, message: 'Excel ricostruito dal backup', rows: baseRecords.length });
+    writeExcel(baseRecords);
+    res.json({ ok: true, message: 'Excel ricostruito dal backup', rows: baseRecords.length });
+  } finally {
+    rebuildingExcel = false;
+  }
 });
 
 const staticDir = process.pkg ? path.dirname(process.execPath) : __dirname;
