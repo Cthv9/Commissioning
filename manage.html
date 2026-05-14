@@ -36,6 +36,8 @@
         <button id="refreshBtn" class="btn btn-outline-secondary">Aggiorna</button>
         <button id="exportCsvBtn" class="btn btn-outline-success" title="Esporta CSV (dati filtrati)">CSV</button>
         <button id="exportPdfBtn" class="btn btn-outline-danger" title="Esporta PDF (dati filtrati)">PDF</button>
+        <button id="importDfBtn" class="btn btn-outline-primary" title="Importa pacchetto .df dal portale remoto">📥 Importa .df</button>
+        <input type="file" id="importDfInput" accept=".df" style="display:none;">
         <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info title="Info"><span style="font-size: 20px;">ℹ️</span></a>
       </div>
 
@@ -571,6 +573,71 @@ function openEdit(id) {
         document.head.appendChild(s1);
       } else {
         exportPdf();
+      }
+    });
+
+    // ── Toast di notifica ──────────────────────────────────────────────────────
+    function showToast(html, type = 'success') {
+      let container = document.getElementById('toastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '1100';
+        document.body.appendChild(container);
+      }
+      const id = 'toast_' + Date.now();
+      container.insertAdjacentHTML('beforeend', `
+        <div id="${id}" class="toast align-items-center text-bg-${type} border-0 show mb-2" role="alert" aria-live="assertive">
+          <div class="d-flex">
+            <div class="toast-body">${html}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Chiudi"></button>
+          </div>
+        </div>`);
+      const el = document.getElementById(id);
+      new bootstrap.Toast(el, { delay: 6000 }).show();
+      el.addEventListener('hidden.bs.toast', () => el.remove());
+    }
+
+    // ── Importa .df ────────────────────────────────────────────────────────────
+    document.getElementById('importDfBtn').addEventListener('click', () => {
+      document.getElementById('importDfInput').click();
+    });
+
+    document.getElementById('importDfInput').addEventListener('change', async function () {
+      const file = this.files[0];
+      if (!file) return;
+      this.value = '';
+
+      const btn = document.getElementById('importDfBtn');
+      btn.disabled = true;
+      btn.textContent = 'Importazione…';
+
+      const formData = new FormData();
+      formData.append('dfFile', file);
+
+      try {
+        const res = await fetch('/import-df', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Errore importazione');
+
+        const r = data.newRecord;
+        const label = `${r.Cantiere} — ${r['Nome Barca']} (${r['Numero Scafo']})`;
+        const notes = [];
+        if (data.filesImported > 0) notes.push(`${data.filesImported} file allegati`);
+        if (data.normalization) {
+          for (const [k, v] of Object.entries(data.normalization)) {
+            if (v) notes.push(`${k}: "${v.from}" → "${v.to}"`);
+          }
+        }
+
+        showToast(`Importato: <strong>${escapeHtml(label)}</strong>${notes.length ? '<br><small>' + notes.map(escapeHtml).join(' | ') + '</small>' : ''}`, 'success');
+        loadRecords();
+      } catch (err) {
+        showToast('Errore: ' + escapeHtml(err.message), 'danger');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📥 Importa .df';
       }
     });
 

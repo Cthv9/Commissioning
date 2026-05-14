@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const { execFile, spawn } = require('child_process');
 const xlsx = require('xlsx');
+const AdmZip = require('adm-zip');
 
 /**
  * Percorso share (fonte ufficiale file + Excel)
@@ -779,6 +780,165 @@ app.post('/admin/rebuild-excel', (req, res) => {
     res.json({ ok: true, message: 'Excel ricostruito dal backup', rows: baseRecords.length });
   } finally {
     rebuildingExcel = false;
+  }
+});
+
+/**
+ * Importa un pacchetto .df (ZIP rinominato) inviato dal portale slave.
+ * Estrae, organizza i file, aggiunge la riga all'Excel e aggiorna il backup.
+ */
+const dfUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const tmpDir = path.join(backupDir, 'tmp_df_imports');
+    ensureDir(tmpDir);
+    cb(null, tmpDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `import_${Date.now()}.df`);
+  },
+});
+const dfUpload = multer({
+  storage: dfUploadStorage,
+  limits: { fileSize: 500 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === '.df') return cb(null, true);
+    cb(new Error('Solo file .df sono accettati per l\'importazione.'));
+  },
+});
+
+app.post('/import-df', dfUpload.single('dfFile'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Nessun file .df ricevuto.' });
+  }
+
+  const dfPath = req.file.path;
+
+  try {
+    const zip = new AdmZip(dfPath);
+    const recordEntry = zip.getEntry('record.json');
+    if (!recordEntry) {
+      return res.status(400).json({ error: 'record.json non trovato nel pacchetto .df' });
+    }
+
+    let record;
+    try {
+      record = JSON.parse(recordEntry.getData().toString('utf8'));
+    } catch (e) {
+      return res.status(400).json({ error: 'record.json non è un JSON valido: ' + e.message });
+    }
+
+    // Normalizza i valori rispetto a quelli esistenti
+    const dataWithMeta = readExcel();
+    const baseRecords = dataWithMeta.map(r => {
+      const out = {};
+      for (const h of BASE_HEADERS) out[h] = r[h] ?? '';
+      return out;
+    });
+
+    const existingCantieri = new Set(baseRecords.map(r => r.Cantiere));
+    const existingOperatori = new Set(baseRecords.map(r => r.Operatore));
+    const existingTipi = new Set(baseRecords.map(r => r.Tipo));
+
+    const origC = String(record.Cantiere || '').trim();
+    const origO = String(record.Operatore || '').trim();
+    const origT = String(record.Tipo || '').trim();
+
+    const normC = normalizeValue(origC, existingCantieri);
+    const normO = normalizeValue(origO, existingOperatori);
+    const normT = normalizeValue(origT, existingTipi);
+
+    const normalization = {
+      cantiere: origC !== normC ? { from: origC, to: normC } : null,
+      operatore: origO !== normO ? { from: origO, to: normO } : null,
+      tipo: origT !== normT ? { from: origT, to: normT } : null,
+    };
+
+    const finalRecord = {
+      Cantiere: normC || origC,
+      'Nome Barca': String(record['Nome Barca'] || '').trim(),
+      'Numero Scafo': String(record['Numero Scafo'] || '').trim(),
+      Matricola: String(record.Matricola || '').trim(),
+      Tipo: normT || origT,
+      Operatore: normO || origO,
+    };
+
+    // Crea la cartella di destinazione e le sottocartelle standard
+    const recordFolder = getRecordFolder(finalRecord);
+    ensureDir(recordFolder);
+    ensureStandardSubfolders(recordFolder);
+
+    // Copia gli allegati nelle sottocartelle categorizzate
+    const copiedFiles = [];
+    const allegatiEntries = zip.getEntries().filter(e => e.entryName.startsWith('allegati/') && !e.isDirectory);
+    for (const entry of allegatiEntries) {
+      const filename = path.basename(entry.entryName);
+      if (!filename) continue;
+
+      const sub = chooseSubfolderByExt(filename);
+      const destDir = path.join(recordFolder, sub);
+      ensureDir(destDir);
+
+      let dest = path.join(destDir, filename);
+      if (fs.existsSync(dest)) {
+        const ext = path.extname(filename);
+        const base = path.basename(filename, ext);
+        let k = 1;
+        while (fs.existsSync(dest)) {
+          dest = path.join(destDir, `${base} (${k})${ext}`);
+          k++;
+        }
+      }
+
+      fs.writeFileSync(dest, entry.getData());
+      copiedFiles.push(dest);
+    }
+
+    // Genera nuovo ID e aggiungi riga all'Excel
+    const newID = baseRecords.length > 0
+      ? baseRecords.reduce((max, r) => Math.max(max, Number(r.ID) || 0), 0) + 1
+      : 1;
+
+    const newBaseRecord = {
+      ID: newID,
+      ...finalRecord,
+      'Data e Ora Inserimento': record['Data e Ora Inserimento'] || formatDate(new Date()),
+    };
+
+    baseRecords.push(newBaseRecord);
+    try {
+      writeExcel(baseRecords);
+    } catch (e) {
+      baseRecords.pop();
+      return res.status(500).json({ error: 'Impossibile scrivere Excel. Chiudere il file se aperto in un altro programma.' });
+    }
+
+    // Audit trail
+    const username = process.env.USERNAME || process.env.USER || 'unknown';
+    const meta = loadMeta();
+    meta[String(newID)] = {
+      CreatoDa: username,
+      CreatoIl: new Date().toISOString(),
+      ModificatoDa: '',
+      ModificatoIl: '',
+      FonteImport: 'portale-slave',
+    };
+    saveMeta(meta);
+
+    const fullRecords = attachMeta(baseRecords);
+    persistBackup('import-df', { record: newBaseRecord, files: copiedFiles }, fullRecords);
+
+    res.json({
+      message: 'Pacchetto .df importato con successo',
+      newRecord: fullRecords.find(r => String(r.ID) === String(newID)) || newBaseRecord,
+      filesImported: copiedFiles.length,
+      normalization,
+    });
+  } catch (err) {
+    console.error('Errore import-df:', err);
+    res.status(500).json({ error: 'Errore durante l\'importazione: ' + err.message });
+  } finally {
+    try { fs.unlinkSync(dfPath); } catch {}
   }
 });
 
