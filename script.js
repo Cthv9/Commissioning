@@ -137,6 +137,7 @@ document.getElementById('uploadForm').addEventListener('submit', async (event) =
           progressBar.setAttribute('aria-valuenow', '0');
           submitButton.innerText = 'Invia';
           submitButton.classList.replace('btn-secondary', 'btn-primary');
+          submitButton.disabled = false;
         }, { once: true });
       } else {
         alert('Errore nel caricamento dei file.');

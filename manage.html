@@ -467,7 +467,11 @@ function openEdit(id) {
     // Eventi UI
     document.getElementById('refreshBtn').addEventListener('click', () => loadRecords());
 
-    document.getElementById('searchInput').addEventListener('input', () => applyFilter(true));
+    let _searchDebounce;
+    document.getElementById('searchInput').addEventListener('input', () => {
+      clearTimeout(_searchDebounce);
+      _searchDebounce = setTimeout(() => applyFilter(true), 300);
+    });
 
     document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
       pageSize = parseInt(e.target.value, 10) || 50;
