@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Commissioning</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; }
+    .kpi-card { border-left: 4px solid; }
+    .kpi-card.primary { border-color: #0d6efd; }
+    .kpi-card.success { border-color: #198754; }
+    .kpi-card.warning { border-color: #ffc107; }
+    .kpi-card.info   { border-color: #0dcaf0; }
+    .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+    .kpi-label { font-size: 0.78rem; color: #6c757d; text-transform: uppercase; letter-spacing: .05em; }
+    .kpi-sub   { font-size: 0.85rem; color: #495057; margin-top: 2px; }
+    .chart-card { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .filter-btn.active { background: #0d6efd; color: white; border-color: #0d6efd; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div class="sticky-top bg-white border-bottom">
+    <div class="container-fluid py-2">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="index.html" class="btn btn-outline-secondary btn-sm">← Nuovo</a>
+        <a href="manage.html" class="btn btn-outline-secondary btn-sm">Archivio</a>
+        <strong class="ms-1 text-primary">Dashboard</strong>
+
+        <div class="ms-auto d-flex gap-2 align-items-center">
+          <!-- Filtri periodo -->
+          <div class="btn-group btn-group-sm" role="group" id="filterGroup">
+            <button class="btn btn-outline-secondary filter-btn active" data-period="all">Tutto</button>
+            <button class="btn btn-outline-secondary filter-btn" data-period="30">30 gg</button>
+            <button class="btn btn-outline-secondary filter-btn" data-period="90">90 gg</button>
+            <button class="btn btn-outline-secondary filter-btn" data-period="year">Anno</button>
+          </div>
+          <button class="btn btn-outline-danger btn-sm" id="exportPdfBtn">PDF</button>
+          <a href="#" class="text-decoration-none text-secondary ms-1" data-df-info title="Info"><span style="font-size:20px;">ℹ️</span></a>
+        </div>
+      </div>
+      <div class="small text-muted mt-1" id="statusLine">Caricamento...</div>
+    </div>
+  </div>
+
+  <div class="container-fluid my-3" id="mainContent">
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="card kpi-card primary h-100 p-3">
+          <div class="kpi-label">Totale record</div>
+          <div class="kpi-value text-primary" id="kpiTotal">—</div>
+          <div class="kpi-sub" id="kpiPeriodLabel"></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card kpi-card success h-100 p-3">
+          <div class="kpi-label">Questo mese</div>
+          <div class="kpi-value text-success" id="kpiThisMonth">—</div>
+          <div class="kpi-sub" id="kpiThisMonthLabel"></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card kpi-card warning h-100 p-3">
+          <div class="kpi-label">Cantiere top</div>
+          <div class="kpi-value text-warning" id="kpiTopCantiere" style="font-size:1.3rem;">—</div>
+          <div class="kpi-sub" id="kpiTopCantiereCount"></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card kpi-card info h-100 p-3">
+          <div class="kpi-label">Operatore top</div>
+          <div class="kpi-value text-info" id="kpiTopOperatore" style="font-size:1.3rem;">—</div>
+          <div class="kpi-sub" id="kpiTopOperatoreCount"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grafici riga 1 -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-lg-8">
+        <div class="chart-card p-3 h-100">
+          <h6 class="mb-3">Record per Cantiere</h6>
+          <canvas id="chartCantiere" height="220"></canvas>
+        </div>
+      </div>
+      <div class="col-12 col-lg-4">
+        <div class="chart-card p-3 h-100">
+          <h6 class="mb-3">Distribuzione per Tipo</h6>
+          <canvas id="chartTipo" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grafici riga 2 -->
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-lg-8">
+        <div class="chart-card p-3 h-100">
+          <h6 class="mb-3">Andamento mensile inserimenti</h6>
+          <canvas id="chartTrend" height="200"></canvas>
+        </div>
+      </div>
+      <div class="col-12 col-lg-4">
+        <div class="chart-card p-3 h-100">
+          <h6 class="mb-3">Record per Operatore</h6>
+          <canvas id="chartOperatore" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabella Top 10 Cantieri -->
+    <div class="chart-card p-3">
+      <h6 class="mb-3">Top 10 Cantieri</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" id="topTable">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Cantiere</th>
+              <th>Record</th>
+              <th>% sul totale</th>
+              <th>Ultimo inserimento</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /container-fluid -->
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    // ── Palette colori coerente ──────────────────────────────────────────────
+    const PALETTE = [
+      '#0d6efd','#198754','#ffc107','#0dcaf0','#dc3545',
+      '#6610f2','#fd7e14','#20c997','#6c757d','#d63384'
+    ];
+
+    // ── Stato globale ────────────────────────────────────────────────────────
+    let allRecords = [];
+    let activePeriod = 'all';
+    const charts = {};
+
+    // ── Parsing data italiana: "DD/MM/YYYY, HH:MM" ──────────────────────────
+    function parseItDate(str) {
+      if (!str) return null;
+      // formato atteso: "15/01/2024, 10:30"
+      const m = String(str).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{1,2}):(\d{2})/);
+      if (!m) return null;
+      return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+    }
+
+    // ── Filtra record per periodo selezionato ────────────────────────────────
+    function filterByPeriod(records) {
+      if (activePeriod === 'all') return records;
+      const now = new Date();
+      const cutoff = new Date(now);
+      if (activePeriod === '30') cutoff.setDate(now.getDate() - 30);
+      else if (activePeriod === '90') cutoff.setDate(now.getDate() - 90);
+      else if (activePeriod === 'year') cutoff.setMonth(0, 1), cutoff.setHours(0, 0, 0, 0);
+      return records.filter(r => {
+        const d = parseItDate(r['Data e Ora Inserimento']);
+        return d && d >= cutoff;
+      });
+    }
+
+    // ── Aggregazioni ─────────────────────────────────────────────────────────
+    function groupBy(records, key) {
+      const map = {};
+      for (const r of records) {
+        const k = r[key] || '(non specificato)';
+        map[k] = (map[k] || 0) + 1;
+      }
+      return map;
+    }
+
+    function sortedEntries(map, limit = Infinity) {
+      return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, limit);
+    }
+
+    function monthlyTrend(records) {
+      const map = {};
+      for (const r of records) {
+        const d = parseItDate(r['Data e Ora Inserimento']);
+        if (!d) continue;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        map[key] = (map[key] || 0) + 1;
+      }
+      const keys = Object.keys(map).sort();
+      return { labels: keys.map(k => k.replace('-', '/')), values: keys.map(k => map[k]) };
+    }
+
+    // ── KPI ──────────────────────────────────────────────────────────────────
+    function updateKpi(records) {
+      const total = records.length;
+      document.getElementById('kpiTotal').textContent = total;
+
+      // Questo mese
+      const now = new Date();
+      const thisMonth = records.filter(r => {
+        const d = parseItDate(r['Data e Ora Inserimento']);
+        return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      }).length;
+      document.getElementById('kpiThisMonth').textContent = thisMonth;
+      document.getElementById('kpiThisMonthLabel').textContent =
+        now.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
+
+      // Period label
+      const periodLabels = { all: 'tutti i record', '30': 'ultimi 30 giorni', '90': 'ultimi 90 giorni', year: 'anno corrente' };
+      document.getElementById('kpiPeriodLabel').textContent = periodLabels[activePeriod] || '';
+
+      // Top cantiere
+      const byCantiere = groupBy(records, 'Cantiere');
+      const topC = sortedEntries(byCantiere, 1)[0];
+      document.getElementById('kpiTopCantiere').textContent = topC ? topC[0] : '—';
+      document.getElementById('kpiTopCantiereCount').textContent = topC ? `${topC[1]} record` : '';
+
+      // Top operatore
+      const byOp = groupBy(records, 'Operatore');
+      const topO = sortedEntries(byOp, 1)[0];
+      document.getElementById('kpiTopOperatore').textContent = topO ? topO[0] : '—';
+      document.getElementById('kpiTopOperatoreCount').textContent = topO ? `${topO[1]} record` : '';
+    }
+
+    // ── Grafici ──────────────────────────────────────────────────────────────
+    function destroyChart(id) {
+      if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+    }
+
+    function drawBarHorizontal(canvasId, label, entries) {
+      destroyChart(canvasId);
+      const labels = entries.map(e => e[0]);
+      const data   = entries.map(e => e[1]);
+      charts[canvasId] = new Chart(document.getElementById(canvasId), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label, data, backgroundColor: PALETTE.slice(0, labels.length), borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    function drawDonut(canvasId, label, entries) {
+      destroyChart(canvasId);
+      const labels = entries.map(e => e[0]);
+      const data   = entries.map(e => e[1]);
+      charts[canvasId] = new Chart(document.getElementById(canvasId), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ label, data, backgroundColor: PALETTE.slice(0, labels.length), hoverOffset: 6 }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+        }
+      });
+    }
+
+    function drawLine(canvasId, label, trend) {
+      destroyChart(canvasId);
+      charts[canvasId] = new Chart(document.getElementById(canvasId), {
+        type: 'line',
+        data: {
+          labels: trend.labels,
+          datasets: [{
+            label,
+            data: trend.values,
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13,110,253,.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    // ── Tabella Top 10 ───────────────────────────────────────────────────────
+    function updateTopTable(records) {
+      const byCantiere = groupBy(records, 'Cantiere');
+      const top10 = sortedEntries(byCantiere, 10);
+      const total = records.length;
+
+      // Data ultimo inserimento per cantiere
+      const lastDate = {};
+      for (const r of records) {
+        const c = r['Cantiere'] || '(non specificato)';
+        const d = r['Data e Ora Inserimento'] || '';
+        if (!lastDate[c] || d > lastDate[c]) lastDate[c] = d;
+      }
+
+      const tbody = document.querySelector('#topTable tbody');
+      tbody.innerHTML = top10.map(([cantiere, count], i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${esc(cantiere)}</td>
+          <td><strong>${count}</strong></td>
+          <td>${total ? Math.round(count / total * 100) : 0}%</td>
+          <td class="text-muted">${esc(lastDate[cantiere] || '')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" class="text-center text-muted">Nessun dato</td></tr>';
+    }
+
+    function esc(str) {
+      return String(str ?? '')
+        .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    // ── Aggiorna tutto ───────────────────────────────────────────────────────
+    function refresh() {
+      const records = filterByPeriod(allRecords);
+
+      updateKpi(records);
+
+      // Grafico cantiere (max 15 per leggibilità)
+      drawBarHorizontal('chartCantiere', 'Record', sortedEntries(groupBy(records, 'Cantiere'), 15));
+
+      // Donut tipo
+      drawDonut('chartTipo', 'Tipo', sortedEntries(groupBy(records, 'Tipo')));
+
+      // Trend mensile
+      drawLine('chartTrend', 'Inserimenti', monthlyTrend(records));
+
+      // Grafico operatore (max 10)
+      drawBarHorizontal('chartOperatore', 'Record', sortedEntries(groupBy(records, 'Operatore'), 10));
+
+      updateTopTable(records);
+
+      const label = { all: 'tutti i record', '30': 'ultimi 30 giorni', '90': 'ultimi 90 giorni', year: 'anno corrente' }[activePeriod];
+      document.getElementById('statusLine').textContent =
+        `${records.length} record mostrati (${label}) su ${allRecords.length} totali`;
+    }
+
+    // ── Load dati ────────────────────────────────────────────────────────────
+    async function loadData() {
+      document.getElementById('statusLine').textContent = 'Caricamento...';
+      try {
+        const res = await fetch('/records');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        allRecords = await res.json();
+      } catch (e) {
+        document.getElementById('statusLine').textContent = 'Errore caricamento dati: ' + e.message;
+        return;
+      }
+      refresh();
+    }
+
+    // ── Export PDF ───────────────────────────────────────────────────────────
+    async function exportPdf() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+      const records = filterByPeriod(allRecords);
+      const now = new Date().toLocaleString('it-IT');
+
+      doc.setFontSize(16);
+      doc.text('Dashboard Commissioning', 14, 16);
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text(`Esportato il ${now} — ${records.length} record`, 14, 23);
+      doc.setTextColor(0);
+
+      let y = 30;
+
+      // Snapshot grafici come immagine
+      const chartIds = ['chartCantiere', 'chartTipo', 'chartTrend', 'chartOperatore'];
+      const chartTitles = ['Per Cantiere', 'Per Tipo', 'Andamento mensile', 'Per Operatore'];
+      const canvases = chartIds.map(id => document.getElementById(id));
+
+      // Prima riga: due grafici affiancati
+      for (let i = 0; i < 2; i++) {
+        const img = canvases[i].toDataURL('image/png');
+        doc.addImage(img, 'PNG', 14 + i * 140, y, 130, 60);
+        doc.setFontSize(8);
+        doc.text(chartTitles[i], 14 + i * 140, y - 2);
+      }
+      y += 68;
+
+      // Seconda riga: due grafici affiancati
+      for (let i = 2; i < 4; i++) {
+        const img = canvases[i].toDataURL('image/png');
+        doc.addImage(img, 'PNG', 14 + (i - 2) * 140, y, 130, 60);
+        doc.setFontSize(8);
+        doc.text(chartTitles[i], 14 + (i - 2) * 140, y - 2);
+      }
+      y += 72;
+
+      // Tabella Top 10
+      doc.setFontSize(10);
+      doc.text('Top 10 Cantieri', 14, y);
+      y += 4;
+
+      const byCantiere = groupBy(records, 'Cantiere');
+      const top10 = sortedEntries(byCantiere, 10);
+      const total = records.length;
+      const lastDate = {};
+      for (const r of records) {
+        const c = r['Cantiere'] || '';
+        const d = r['Data e Ora Inserimento'] || '';
+        if (!lastDate[c] || d > lastDate[c]) lastDate[c] = d;
+      }
+
+      doc.autoTable({
+        startY: y,
+        head: [['#', 'Cantiere', 'Record', '%', 'Ultimo inserimento']],
+        body: top10.map(([c, n], i) => [i + 1, c, n, `${total ? Math.round(n / total * 100) : 0}%`, lastDate[c] || '']),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [13, 110, 253] },
+      });
+
+      doc.save(`dashboard_commissioning_${now.replace(/[/:, ]/g, '-')}.pdf`);
+    }
+
+    // ── Filtri periodo ───────────────────────────────────────────────────────
+    document.getElementById('filterGroup').addEventListener('click', e => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activePeriod = btn.dataset.period;
+      refresh();
+    });
+
+    document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+
+    loadData();
+  </script>
+
+  <script src="ui-common.js"></script>
+
+  <!-- Modal Info / Impostazioni (condiviso) -->
+  <div class="modal fade" id="dfInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Info</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">
+            Il portale consente di registrare i <strong>commissioning</strong> e archiviare i relativi allegati, salvando i dati in un file Excel e organizzando automaticamente le cartelle.
+          </p>
+          <p class="mb-3">
+            <small class="text-muted">Versione <span id="dfAppVersion">v?</span></small>
+          </p>
+          <div class="border-top pt-3">
+            <h6 class="mb-2">Impostazioni</h6>
+            <label class="form-label">Destinazione caricamenti</label>
+            <div class="input-group">
+              <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\Server\Share\Cartella" />
+              <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button">Scegli…</button>
+              <button id="dfSaveDirBtn" class="btn btn-primary" type="button">Salva</button>
+            </div>
+            <div class="form-text">Cambia la cartella base dove vengono create le cartelle dei commissioning.</div>
+          </div>
+          <div class="mt-4 text-center">
+            <small class="text-muted">Made with ❤️ by DF</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
