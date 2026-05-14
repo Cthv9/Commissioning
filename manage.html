@@ -439,7 +439,17 @@ function openEdit(id) {
     async function deleteRecord(id) {
       if (!confirm('Sei sicuro di voler eliminare questo record?')) return;
 
-      await fetch(`/records/${id}`, { method: 'DELETE' });
+      try {
+        const res = await fetch(`/records/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || `Errore durante eliminazione (HTTP ${res.status})`);
+          return;
+        }
+      } catch (e) {
+        alert('Errore di rete durante eliminazione.');
+        return;
+      }
 
       // dopo delete, ricarica e se serve torna a pagina valida
       await loadRecords();
