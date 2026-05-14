@@ -13,6 +13,10 @@ if (args[0] === 'build') {
     process.exit(1);
   }
 } else {
-  const child = spawn('tauri', args, { stdio: 'inherit', shell: true });
+  const child = spawn('tauri', args, { stdio: 'inherit' });
+  child.on('error', (err) => {
+    console.error('Impossibile avviare tauri CLI:', err.message);
+    process.exit(1);
+  });
   child.on('exit', code => process.exit(code ?? 0));
 }

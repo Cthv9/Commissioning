@@ -17,6 +17,32 @@ fn select_directory(app: AppHandle) -> Option<String> {
         .map(|p| p.to_string())
 }
 
+fn show_error_window(app_handle: &tauri::AppHandle, message: &str) {
+    let encoded = message
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;");
+    let html = format!(
+        "data:text/html,<html><body style='font-family:sans-serif;display:flex;\
+         align-items:center;justify-content:center;height:100vh;margin:0;\
+         background:#1e1e1e;color:#f0f0f0'><div style='text-align:center'>\
+         <h2 style='color:#e05252'>Errore avvio server</h2><p>{}</p>\
+         <p style='font-size:12px;color:#888'>Chiudere e riavviare l\u{2019}applicazione.</p>\
+         </div></body></html>",
+        encoded
+    );
+    if let Ok(url) = html.parse() {
+        let _ = tauri::WebviewWindowBuilder::new(
+            app_handle,
+            "error",
+            tauri::WebviewUrl::External(url),
+        )
+        .title("Errore avvio server")
+        .inner_size(480.0, 220.0)
+        .build();
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -30,22 +56,32 @@ fn main() {
                 let appdata = std::env::var("APPDATA").unwrap_or_default();
                 let backup_dir = format!("{}\\Portale Commissioning\\backup", appdata);
 
-                let server_path = app
-                    .path()
-                    .resource_dir()
-                    .expect("resource dir non trovata")
-                    .join("server.exe");
-
-                let mut cmd = std::process::Command::new(&server_path);
-                cmd.env("PORTALE_BACKUP_DIR", &backup_dir);
-                #[cfg(target_os = "windows")]
-                {
-                    use std::os::windows::process::CommandExt;
-                    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                match app.path().resource_dir() {
+                    Ok(resource_dir) => {
+                        let server_path = resource_dir.join("server.exe");
+                        let mut cmd = std::process::Command::new(&server_path);
+                        cmd.env("PORTALE_BACKUP_DIR", &backup_dir);
+                        #[cfg(target_os = "windows")]
+                        {
+                            use std::os::windows::process::CommandExt;
+                            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                        }
+                        match cmd.spawn() {
+                            Ok(child) => {
+                                if let Ok(mut guard) = app.state::<ServerProcess>().0.lock() {
+                                    *guard = Some(child);
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("ERRORE: impossibile avviare server.exe: {}", e);
+                                // Il thread di attesa andrà in timeout e mostrerà la finestra di errore
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("ERRORE: resource dir non trovata: {}", e);
+                    }
                 }
-                let child = cmd.spawn().expect("Impossibile avviare server.exe");
-
-                *app.state::<ServerProcess>().0.lock().unwrap() = Some(child);
             }
 
             // Attende che il server sia pronto su porta 3000, poi crea la finestra
@@ -62,42 +98,33 @@ fn main() {
 
                 if !ready {
                     eprintln!("ERRORE: il server non ha risposto entro 15 secondi");
-                    let error_html = "data:text/html,<html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1e1e1e;color:#f0f0f0'><div style='text-align:center'><h2 style='color:#e05252'>Errore avvio server</h2><p>Il server non ha risposto entro 15 secondi.<br>Chiudi l\'applicazione e riprova.</p></div></body></html>";
-                    tauri::WebviewWindowBuilder::new(
+                    show_error_window(
                         &app_handle,
-                        "error",
-                        tauri::WebviewUrl::External(
-                            error_html
-                                .parse()
-                                .expect("URL di errore non valido"),
-                        ),
-                    )
-                    .title("Errore avvio server")
-                    .inner_size(480.0, 200.0)
-                    .build()
-                    .expect("Impossibile creare la finestra di errore")
-                    .show()
-                    .expect("Impossibile mostrare la finestra di errore");
+                        "Il server non ha risposto entro 15 secondi.",
+                    );
                     return;
                 }
 
-                tauri::WebviewWindowBuilder::new(
-                    &app_handle,
-                    "main",
-                    tauri::WebviewUrl::External(
-                        "http://127.0.0.1:3000/index.html"
-                            .parse()
-                            .expect("URL non valido"),
-                    ),
-                )
-                .title("Portale Commissioning")
-                .inner_size(1280.0, 800.0)
-                .min_inner_size(900.0, 650.0)
-                .visible(false)
-                .build()
-                .expect("Impossibile creare la finestra principale")
-                .show()
-                .expect("Impossibile mostrare la finestra");
+                if let Ok(url) = "http://127.0.0.1:3000/index.html".parse() {
+                    let result = tauri::WebviewWindowBuilder::new(
+                        &app_handle,
+                        "main",
+                        tauri::WebviewUrl::External(url),
+                    )
+                    .title("Portale Commissioning")
+                    .inner_size(1280.0, 800.0)
+                    .min_inner_size(900.0, 650.0)
+                    .visible(false)
+                    .build();
+
+                    match result {
+                        Ok(win) => { let _ = win.show(); }
+                        Err(e) => {
+                            eprintln!("ERRORE: impossibile creare la finestra principale: {}", e);
+                            show_error_window(&app_handle, "Impossibile creare la finestra principale.");
+                        }
+                    }
+                }
             });
 
             Ok(())
