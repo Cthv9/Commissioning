@@ -41,7 +41,8 @@ async function dfOpenInfoModal() {
     const inp = document.getElementById('dfUploadsRootDir');
     if (inp) inp.value = s.uploadsRootDir || '';
   } catch (e) {
-    // ignore
+    console.warn('dfLoadSettings failed:', e);
+    dfSetText('dfAppVersion', '—');
   }
 
   const modalEl = document.getElementById('dfInfoModal');

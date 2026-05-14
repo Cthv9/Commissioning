@@ -223,14 +223,19 @@ function readExcel() {
   if (!fs.existsSync(excelPath)) {
     return readSnapshot();
   }
-  const workbook = xlsx.readFile(excelPath);
-  const sheet = workbook.Sheets['Matrice'];
-  if (!sheet) {
-    console.error('Foglio "Matrice" non trovato nel file Excel. Uso backup snapshot.');
+  try {
+    const workbook = xlsx.readFile(excelPath);
+    const sheet = workbook.Sheets['Matrice'];
+    if (!sheet) {
+      console.error('Foglio "Matrice" non trovato nel file Excel. Uso backup snapshot.');
+      return readSnapshot();
+    }
+    const rows = xlsx.utils.sheet_to_json(sheet);
+    return attachMeta(rows);
+  } catch (e) {
+    console.error('Errore lettura Excel, uso snapshot:', e.message);
     return readSnapshot();
   }
-  const rows = xlsx.utils.sheet_to_json(sheet);
-  return attachMeta(rows);
 }
 
 function writeExcel(baseRecords) {
@@ -784,7 +789,8 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError || (err && err.message && err.message.startsWith('Tipo file'))) {
     return res.status(400).json({ error: err.message });
   }
-  next(err);
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ error: 'Errore interno del server' });
 });
 
 app.listen(3000, '127.0.0.1', () => {
