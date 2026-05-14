@@ -33,7 +33,13 @@ function main() {
     process.exit(1);
   }
 
-  const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf-8'));
+  let snapshot;
+  try {
+    snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf-8'));
+  } catch (e) {
+    console.error('Backup snapshot non è un JSON valido:', e.message);
+    process.exit(1);
+  }
   if (!Array.isArray(snapshot) || snapshot.length === 0) {
     console.error('Backup snapshot vuoto o non valido.');
     process.exit(1);

@@ -109,60 +109,74 @@ function main() {
   }
 
   const extracted = unzipDfToTemp(dfPath);
-  const recordPath = path.join(extracted, 'record.json');
-
-  if (!fs.existsSync(recordPath)) {
-    console.error('record.json non trovato nel pacchetto .df');
-    process.exit(1);
-  }
-
-  const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
-
-  const uploadsRoot = getUploadsRootDir();
-  const cantiereFolder = safeFilenamePart(record.Cantiere || 'Senza_Cantiere');
-  const categoriaFolder = safeFilenamePart(categoryFromTipo(record.Tipo));
-  const dirName = `${record.Cantiere}_${record['Nome Barca']}_${record['Numero Scafo']}`;
-  const recordFolderName = safeFilenamePart(dirName);
-  const recordFolder = path.join(uploadsRoot, cantiereFolder, categoriaFolder, recordFolderName);
-
-  ensureDir(recordFolder);
-  ensureStandardSubfolders(recordFolder);
-
-  const allegatiDir = path.join(extracted, 'allegati');
-  if (fs.existsSync(allegatiDir)) {
-    const files = fs.readdirSync(allegatiDir);
-    for (const f of files) {
-      const src = path.join(allegatiDir, f);
-      if (!fs.statSync(src).isFile()) continue;
-
-      const sub = chooseSubfolderByExt(f);
-      const destDir = path.join(recordFolder, sub);
-      ensureDir(destDir);
-
-      let dest = path.join(destDir, f);
-      if (fs.existsSync(dest)) {
-        const ext = path.extname(f);
-        const base = path.basename(f, ext);
-        let k = 1;
-        while (fs.existsSync(dest)) {
-          dest = path.join(destDir, `${base} (${k})${ext}`);
-          k++;
-        }
-      }
-
-      fs.copyFileSync(src, dest);
-    }
-  }
 
   try {
-    fs.rmSync(extracted, { recursive: true, force: true });
-  } catch (e) {
-    console.warn('Impossibile eliminare cartella temporanea:', extracted, e.message);
-  }
+    const recordPath = path.join(extracted, 'record.json');
 
-  console.log('\nImport completato (solo filesystem):');
-  console.log('Cartella:', recordFolder);
-  console.log('Nota: lo scheletro CLI non scrive ancora su Excel. (Step successivo: import completo in app interna.)');
+    if (!fs.existsSync(recordPath)) {
+      console.error('record.json non trovato nel pacchetto .df');
+      process.exit(1);
+    }
+
+    let record;
+    try {
+      record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+    } catch (e) {
+      console.error('record.json non è un JSON valido:', e.message);
+      process.exit(1);
+    }
+
+    const uploadsRoot = getUploadsRootDir();
+    const cantiere = record.Cantiere || 'Senza_Cantiere';
+    const nomeBarca = record['Nome Barca'] || 'Senza_Nome';
+    const numeroScafo = record['Numero Scafo'] || 'Senza_Scafo';
+    const cantiereFolder = safeFilenamePart(cantiere);
+    const categoriaFolder = safeFilenamePart(categoryFromTipo(record.Tipo));
+    const recordFolderName = safeFilenamePart(`${cantiere}_${nomeBarca}_${numeroScafo}`);
+    const recordFolder = path.join(uploadsRoot, cantiereFolder, categoriaFolder, recordFolderName);
+
+    ensureDir(recordFolder);
+    ensureStandardSubfolders(recordFolder);
+
+    const allegatiDir = path.join(extracted, 'allegati');
+    if (fs.existsSync(allegatiDir)) {
+      const files = fs.readdirSync(allegatiDir);
+      for (const f of files) {
+        const src = path.join(allegatiDir, f);
+        if (!fs.statSync(src).isFile()) {
+          console.warn('Skipped (non è un file):', f);
+          continue;
+        }
+
+        const sub = chooseSubfolderByExt(f);
+        const destDir = path.join(recordFolder, sub);
+        ensureDir(destDir);
+
+        let dest = path.join(destDir, f);
+        if (fs.existsSync(dest)) {
+          const ext = path.extname(f);
+          const base = path.basename(f, ext);
+          let k = 1;
+          while (fs.existsSync(dest)) {
+            dest = path.join(destDir, `${base} (${k})${ext}`);
+            k++;
+          }
+        }
+
+        fs.copyFileSync(src, dest);
+      }
+    }
+
+    console.log('\nImport completato (solo filesystem):');
+    console.log('Cartella:', recordFolder);
+    console.log('Nota: lo scheletro CLI non scrive ancora su Excel. (Step successivo: import completo in app interna.)');
+  } finally {
+    try {
+      fs.rmSync(extracted, { recursive: true, force: true });
+    } catch (e) {
+      console.warn('Impossibile eliminare cartella temporanea:', extracted, e.message);
+    }
+  }
 }
 
 main();

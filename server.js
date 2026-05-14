@@ -536,7 +536,12 @@ app.post('/upload', upload.array('files[]'), (req, res) => {
   };
 
   baseRecords.push(newBaseRecord);
-  writeExcel(baseRecords);
+  try {
+    writeExcel(baseRecords);
+  } catch (e) {
+    baseRecords.pop();
+    return res.status(500).json({ error: 'Impossibile scrivere Excel. Chiudere il file se aperto in un altro programma.' });
+  }
 
   // Meta “non pubblica”
   const username = process.env.USERNAME || process.env.USER || 'unknown';
@@ -576,27 +581,39 @@ app.put('/records/:id', (req, res) => {
   const oldRecord = baseRecords[recordIndex];
   const updated = { ...oldRecord, ...req.body };
 
-  // Normalizza cantiere/operatore in base a valori esistenti
+  // Normalizza cantiere/operatore/tipo in base a valori esistenti
   const existingCantieri = new Set(baseRecords.map(r => r.Cantiere));
   const existingOperatori = new Set(baseRecords.map(r => r.Operatore));
+  const existingTipi = new Set(baseRecords.map(r => r.Tipo));
 
   updated.Cantiere = normalizeValue(updated.Cantiere, existingCantieri);
   updated.Operatore = normalizeValue(updated.Operatore, existingOperatori);
+  updated.Tipo = normalizeValue(updated.Tipo, existingTipi);
 
   // Se cambiano i campi di naming, rinomina la cartella
   const oldPath = getRecordFolder(oldRecord);
   const newPath = getRecordFolder(updated);
 
+  let folderRenamed = false;
   if (oldPath !== newPath && fs.existsSync(oldPath)) {
     ensureDir(path.dirname(newPath));
-    // Se la destinazione esiste, evita collisioni
     if (!fs.existsSync(newPath)) {
       fs.renameSync(oldPath, newPath);
+      folderRenamed = true;
+    } else {
+      console.warn(`Rename cartella skipped: la destinazione esiste già (${newPath}). I file restano in ${oldPath}.`);
     }
   }
 
   baseRecords[recordIndex] = updated;
-  writeExcel(baseRecords);
+  try {
+    writeExcel(baseRecords);
+  } catch (e) {
+    if (folderRenamed) {
+      try { fs.renameSync(newPath, oldPath); } catch {}
+    }
+    return res.status(500).json({ error: 'Impossibile scrivere Excel. Chiudere il file se aperto in un altro programma.' });
+  }
 
   const username = process.env.USERNAME || process.env.USER || 'unknown';
   const meta = loadMeta();
@@ -660,7 +677,11 @@ app.delete('/records/:id', (req, res) => {
   }
 
   baseRecords.splice(recordIndex, 1);
-  writeExcel(baseRecords);
+  try {
+    writeExcel(baseRecords);
+  } catch (e) {
+    return res.status(500).json({ error: 'Impossibile scrivere Excel. Chiudere il file se aperto in un altro programma.' });
+  }
 
   // meta: rimuovo la voce per non lasciare orfani
   const meta = loadMeta();

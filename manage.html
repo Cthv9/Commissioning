@@ -324,8 +324,17 @@
 
     async function loadRecords() {
       setStatus('Caricamento record...');
-      const response = await fetch('/records');
-      allRecords = await response.json();
+      try {
+        const response = await fetch('/records');
+        if (!response.ok) {
+          setStatus(`Errore caricamento record (HTTP ${response.status})`);
+          return;
+        }
+        allRecords = await response.json();
+      } catch (e) {
+        setStatus('Errore di rete durante il caricamento dei record.');
+        return;
+      }
 
       // Ultimi inseriti in alto (se ID è progressivo)
       allRecords.sort((a, b) => (b.ID ?? 0) - (a.ID ?? 0));

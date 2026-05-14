@@ -2,7 +2,11 @@ function populateDatalist(datalistId, values) {
   const dl = document.getElementById(datalistId);
   if (!dl) return;
   const uniq = Array.from(new Set((values || []).filter(Boolean).map(v => String(v).trim()))).sort((a, b) => a.localeCompare(b));
-  dl.innerHTML = uniq.map(v => `<option value="${v.replace(/"/g, '&quot;')}"></option>`).join('');
+  dl.replaceChildren(...uniq.map(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    return opt;
+  }));
 }
 
 async function refreshOptions() {
