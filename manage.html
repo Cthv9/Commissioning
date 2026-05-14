@@ -21,6 +21,7 @@
     <div class="container-fluid py-2">
       <div class="d-flex flex-wrap gap-2 align-items-center">
         <a href="index.html" class="btn btn-primary">← Nuovo commissioning</a>
+        <a href="dashboard.html" class="btn btn-outline-primary" title="Dashboard Analytics">📊 Dashboard</a>
 
         <div class="flex-grow-1" style="min-width: 240px;">
           <input id="searchInput" class="form-control" placeholder="Cerca (cantiere, barca, scafo, operatore...)">
@@ -33,6 +34,8 @@
         </select>
 
         <button id="refreshBtn" class="btn btn-outline-secondary">Aggiorna</button>
+        <button id="exportCsvBtn" class="btn btn-outline-success" title="Esporta CSV (dati filtrati)">CSV</button>
+        <button id="exportPdfBtn" class="btn btn-outline-danger" title="Esporta PDF (dati filtrati)">PDF</button>
         <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info title="Info"><span style="font-size: 20px;">ℹ️</span></a>
       </div>
 
@@ -489,6 +492,86 @@ function openEdit(id) {
       if (action === 'folder') openFolder(id);
       else if (action === 'edit') openEdit(id);
       else if (action === 'delete') deleteRecord(id);
+    });
+
+    // ── Export CSV ────────────────────────────────────────────────────────────
+    function exportCsv() {
+      const records = filteredRecords;
+      if (!records.length) { alert('Nessun record da esportare.'); return; }
+
+      const cols = ['ID','Cantiere','Nome Barca','Numero Scafo','Matricola','Tipo','Operatore','Data e Ora Inserimento'];
+      const escape = v => `"${String(v ?? '').replaceAll('"', '""')}"`;
+
+      const lines = [
+        cols.map(escape).join(','),
+        ...records.map(r => cols.map(c => escape(r[c])).join(','))
+      ];
+
+      // UTF-8 BOM per compatibilità Excel
+      const bom = '﻿';
+      const blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `commissioning_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ── Export PDF ────────────────────────────────────────────────────────────
+    function exportPdf() {
+      const records = filteredRecords;
+      if (!records.length) { alert('Nessun record da esportare.'); return; }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const now = new Date().toLocaleString('it-IT');
+
+      doc.setFontSize(14);
+      doc.text('Archivio Commissioning', 14, 14);
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      const q = document.getElementById('searchInput').value.trim();
+      doc.text(`Esportato il ${now}${q ? '  |  Filtro: "' + q + '"' : ''}  |  ${records.length} record`, 14, 21);
+      doc.setTextColor(0);
+
+      doc.autoTable({
+        startY: 26,
+        head: [['ID','Cantiere','Nome Barca','N. Scafo','Matricola','Tipo','Operatore','Data Inserimento']],
+        body: records.map(r => [
+          r.ID ?? '',
+          r.Cantiere ?? '',
+          r['Nome Barca'] ?? '',
+          r['Numero Scafo'] ?? '',
+          r.Matricola ?? '',
+          r.Tipo ?? '',
+          r.Operatore ?? '',
+          r['Data e Ora Inserimento'] ?? '',
+        ]),
+        styles: { fontSize: 7, cellPadding: 2 },
+        headStyles: { fillColor: [13, 110, 253], fontSize: 7 },
+        alternateRowStyles: { fillColor: [248, 249, 250] },
+      });
+
+      doc.save(`commissioning_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+    document.getElementById('exportPdfBtn').addEventListener('click', () => {
+      // Carica jsPDF on-demand se non già presente
+      if (!window.jspdf) {
+        const s1 = document.createElement('script');
+        s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s1.onload = () => {
+          const s2 = document.createElement('script');
+          s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+          s2.onload = exportPdf;
+          document.head.appendChild(s2);
+        };
+        document.head.appendChild(s1);
+      } else {
+        exportPdf();
+      }
     });
 
     // Avvio
