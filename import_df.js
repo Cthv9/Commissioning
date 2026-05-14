@@ -84,11 +84,12 @@ function unzipDfToTemp(dfPath) {
   fs.copyFileSync(dfPath, tmpZip);
 
   // PowerShell built-in su Windows
+  const psCommand = `Expand-Archive -LiteralPath '${tmpZip.replace(/'/g, "''")}' -DestinationPath '${tmpBase.replace(/'/g, "''")}' -Force`;
+  const encoded = Buffer.from(psCommand, 'utf16le').toString('base64');
   execFileSync('powershell.exe', [
     '-NoProfile',
     '-ExecutionPolicy', 'Bypass',
-    '-Command',
-    `Expand-Archive -LiteralPath "${tmpZip}" -DestinationPath "${tmpBase}" -Force`
+    '-EncodedCommand', encoded,
   ], { stdio: 'inherit' });
 
   return tmpBase;
@@ -151,6 +152,12 @@ function main() {
 
       fs.copyFileSync(src, dest);
     }
+  }
+
+  try {
+    fs.rmSync(extracted, { recursive: true, force: true });
+  } catch (e) {
+    console.warn('Impossibile eliminare cartella temporanea:', extracted, e.message);
   }
 
   console.log('\nImport completato (solo filesystem):');

@@ -198,7 +198,6 @@ function loadMeta() {
 
 function saveMeta(meta) {
   ensureDir(backupDir);
-cleanupBackupArtifacts();
   fs.writeFileSync(backupFiles.meta, JSON.stringify(meta, null, 2), 'utf-8');
 }
 
@@ -226,6 +225,10 @@ function readExcel() {
   }
   const workbook = xlsx.readFile(excelPath);
   const sheet = workbook.Sheets['Matrice'];
+  if (!sheet) {
+    console.error('Foglio "Matrice" non trovato nel file Excel. Uso backup snapshot.');
+    return readSnapshot();
+  }
   const rows = xlsx.utils.sheet_to_json(sheet);
   return attachMeta(rows);
 }
@@ -241,7 +244,6 @@ function writeExcel(baseRecords) {
 
 function appendJsonl(entry) {
   ensureDir(backupDir);
-cleanupBackupArtifacts();
   fs.appendFileSync(backupFiles.jsonl, JSON.stringify(entry) + '\n', 'utf-8');
 }
 
@@ -269,7 +271,6 @@ function persistBackup(action, recordOrInfo, fullRecords) {
   }
 
   ensureDir(backupDir);
-cleanupBackupArtifacts();
   fs.writeFileSync(backupFiles.snapshot, JSON.stringify(fullRecords, null, 2), 'utf-8');
 
   // Copia Excel per sicurezza (se esiste)
@@ -432,11 +433,32 @@ const storage = multer.diskStorage({
     cb(null, fullPath);
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname);
+    const safe = path.basename(file.originalname).replace(/[^\w.\-]/g, '_');
+    cb(null, safe || 'file');
   }
 });
 
-const upload = multer({ storage });
+const ALLOWED_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff', '.webp', '.heic',
+  '.mp4', '.mov', '.m4v', '.avi', '.mkv', '.wmv', '.webm',
+  '.eml', '.msg',
+  '.pdf', '.doc', '.docx', '.txt', '.rtf',
+  '.xls', '.xlsx',
+  '.zip',
+]);
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB per file
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ALLOWED_EXTENSIONS.has(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Tipo file non consentito: ${ext}`));
+    }
+  },
+});
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
@@ -453,6 +475,7 @@ app.get('/options', (req, res) => {
     operatori: uniq(data.map(r => r.Operatore)),
     tipi: uniq(data.map(r => r.Tipo)),
   });
+});
 
 /**
  * Impostazioni (UI)
@@ -473,8 +496,6 @@ app.post('/settings/uploads-root', (req, res) => {
 
   const next = saveSettings({ uploadsRootDir: dir });
   res.json({ uploadsRootDir: next.uploadsRootDir });
-});
-
 });
 
 /**
@@ -498,22 +519,19 @@ app.post('/upload', upload.array('files[]'), (req, res) => {
     return out;
   });
 
-  const existingCantieri = new Set(baseRecords.map(r => r.Cantiere));
-  const existingOperatori = new Set(baseRecords.map(r => r.Operatore));
-
-  const normalizedCantiere = normalizeValue(cantiere, existingCantieri);
-  const normalizedOperatore = normalizeValue(operatore, existingOperatori);
-
-  const newID = baseRecords.length > 0 ? Math.max(...baseRecords.map(r => Number(r.ID) || 0)) + 1 : 1;
+  // cantiere/operatore/tipo già normalizzati dal middleware multer (destination callback)
+  const newID = baseRecords.length > 0
+    ? baseRecords.reduce((max, r) => Math.max(max, Number(r.ID) || 0), 0) + 1
+    : 1;
 
   const newBaseRecord = {
     ID: newID,
-    Cantiere: normalizedCantiere,
+    Cantiere: String(cantiere || '').trim(),
     'Nome Barca': String(nomeBarca || '').trim(),
     'Numero Scafo': String(numeroScafo || '').trim(),
     Matricola: matricola ? String(matricola).trim() : '',
     Tipo: String(tipo || '').trim(),
-    Operatore: normalizedOperatore,
+    Operatore: String(operatore || '').trim(),
     'Data e Ora Inserimento': formatDate(new Date()),
   };
 
@@ -537,10 +555,7 @@ app.post('/upload', upload.array('files[]'), (req, res) => {
   res.json({
     message: 'Record aggiunto con successo',
     newRecord: fullRecords.find(r => String(r.ID) === String(newID)) || newBaseRecord,
-    normalization: {
-      cantiere: normalizedCantiere !== cantiere ? { from: cantiere, to: normalizedCantiere } : null,
-      operatore: normalizedOperatore !== operatore ? { from: operatore, to: normalizedOperatore } : null,
-    }
+    normalization: req._dfCorrections || { cantiere: null, operatore: null, tipo: null },
   });
 });
 
@@ -621,12 +636,11 @@ app.delete('/records/:id', (req, res) => {
   const cantiereFolder = safeFilenamePart(recordToDelete.Cantiere || 'Senza_Cantiere');
   const categoriaFolder = safeFilenamePart(categoryFromTipo(recordToDelete.Tipo));
   const recordFolderName = safeFilenamePart(`${recordToDelete.Cantiere}_${recordToDelete['Nome Barca']}_${recordToDelete['Numero Scafo']}`);
-  const legacyDirName = safeFilenamePart(`${recordToDelete.Cantiere}_${recordToDelete['Nome Barca']}_${recordToDelete['Numero Scafo']}`);
 
   // prova a cancellare la cartella (nuova o legacy) su root attuale + eventuali root storiche
   for (const root of roots) {
     const pNew = path.join(root, cantiereFolder, categoriaFolder, recordFolderName);
-    const pOld = path.join(root, legacyDirName);
+    const pOld = path.join(root, recordFolderName);
 
     if (fs.existsSync(pNew)) {
       fs.rmSync(pNew, { recursive: true, force: true });
@@ -678,16 +692,14 @@ app.post('/records/:id/open-folder', (req, res) => {
   const categoriaFolder = safeFilenamePart(categoryFromTipo(record.Tipo));
   const recordFolderName = safeFilenamePart(`${record.Cantiere}_${record['Nome Barca']}_${record['Numero Scafo']}`);
 
-  // Vecchia struttura (fallback storico): <root>\<Cantiere_NomeBarca_Scafo>
-  const legacyDirName = safeFilenamePart(`${record.Cantiere}_${record['Nome Barca']}_${record['Numero Scafo']}`);
-
   let found = null;
 
   for (const root of roots) {
     const pNew = path.join(root, cantiereFolder, categoriaFolder, recordFolderName);
     if (fs.existsSync(pNew)) { found = pNew; break; }
 
-    const pOld = path.join(root, legacyDirName);
+    // Vecchia struttura (fallback storico): <root>\<Cantiere_NomeBarca_Scafo>
+    const pOld = path.join(root, recordFolderName);
     if (fs.existsSync(pOld)) { found = pOld; break; }
   }
 
@@ -731,6 +743,15 @@ app.post('/admin/rebuild-excel', (req, res) => {
 const staticDir = process.pkg ? path.dirname(process.execPath) : __dirname;
 app.use(express.static(staticDir));
 
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError || (err && err.message && err.message.startsWith('Tipo file'))) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
+
 app.listen(3000, '127.0.0.1', () => {
   console.log('Server avviato su http://127.0.0.1:3000/index.html');
+  cleanupBackupArtifacts();
+  setInterval(cleanupBackupArtifacts, 6 * 60 * 60 * 1000); // ogni 6 ore
 });

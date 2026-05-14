@@ -62,6 +62,23 @@ fn main() {
 
                 if !ready {
                     eprintln!("ERRORE: il server non ha risposto entro 15 secondi");
+                    let error_html = "data:text/html,<html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1e1e1e;color:#f0f0f0'><div style='text-align:center'><h2 style='color:#e05252'>Errore avvio server</h2><p>Il server non ha risposto entro 15 secondi.<br>Chiudi l\'applicazione e riprova.</p></div></body></html>";
+                    tauri::WebviewWindowBuilder::new(
+                        &app_handle,
+                        "error",
+                        tauri::WebviewUrl::External(
+                            error_html
+                                .parse()
+                                .expect("URL di errore non valido"),
+                        ),
+                    )
+                    .title("Errore avvio server")
+                    .inner_size(480.0, 200.0)
+                    .build()
+                    .expect("Impossibile creare la finestra di errore")
+                    .show()
+                    .expect("Impossibile mostrare la finestra di errore");
+                    return;
                 }
 
                 tauri::WebviewWindowBuilder::new(
