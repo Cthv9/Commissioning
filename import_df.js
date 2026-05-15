@@ -72,7 +72,12 @@ function getUploadsRootDir() {
   // stesso comportamento del server: se non c'è settings, usa PORTALE_UPLOADS_DIR o PORTALE_ROOT_DIR o fallback
   const settings = getSettings();
   if (settings.uploadsRootDir) return settings.uploadsRootDir;
-  return process.env.PORTALE_UPLOADS_DIR || process.env.PORTALE_ROOT_DIR || '\\\\Fs\\FS\\MAR_SERVICE\\36-Commissioning';
+  const uploadsDir = process.env.PORTALE_UPLOADS_DIR || process.env.PORTALE_ROOT_DIR || '';
+  if (!uploadsDir) {
+    console.error('[ERRORE] Imposta la variabile d\'ambiente PORTALE_ROOT_DIR prima di eseguire questo script.');
+    process.exit(1);
+  }
+  return uploadsDir;
 }
 
 function unzipDfToTemp(dfPath) {

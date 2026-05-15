@@ -3,7 +3,11 @@ const path = require('path');
 const os = require('os');
 const xlsx = require('xlsx');
 
-const rootDir = process.env.PORTALE_ROOT_DIR || '\\\\Fs\\FS\\MAR_SERVICE\\36-Commissioning';
+const rootDir = process.env.PORTALE_ROOT_DIR || '';
+if (!rootDir) {
+  console.error('[ERRORE] Imposta la variabile d\'ambiente PORTALE_ROOT_DIR prima di eseguire questo script.');
+  process.exit(1);
+}
 const excelPath = path.join(rootDir, 'Barche_Commissionate.xlsx');
 
 const backupDir =
