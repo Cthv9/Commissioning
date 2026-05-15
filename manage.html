@@ -186,6 +186,12 @@
     let currentEditId = null;
     let editModalInstance = null;
 
+    function fmtAuditDate(s) {
+      if (!s) return '';
+      const d = new Date(s);
+      return isNaN(d) ? s : d.toLocaleString('it-IT');
+    }
+
     function escapeHtml(str) {
       if (str === null || str === undefined) return '';
       return String(str)
@@ -377,9 +383,9 @@ function openEdit(id) {
       document.getElementById('editOperatore').value = record.Operatore ?? '';
 
       document.getElementById('editCreatoDa').value = record.CreatoDa ?? '';
-      document.getElementById('editCreatoIl').value = record.CreatoIl ?? '';
+      document.getElementById('editCreatoIl').value = fmtAuditDate(record.CreatoIl);
       document.getElementById('editModificatoDa').value = record.ModificatoDa ?? '';
-      document.getElementById('editModificatoIl').value = record.ModificatoIl ?? '';
+      document.getElementById('editModificatoIl').value = fmtAuditDate(record.ModificatoIl);
 
       document.getElementById('editError').classList.add('d-none');
       document.getElementById('editSuccess').classList.add('d-none');
@@ -560,13 +566,13 @@ function openEdit(id) {
 
     document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
     document.getElementById('exportPdfBtn').addEventListener('click', () => {
-      // Carica jsPDF on-demand se non già presente
+      // Carica jsPDF on-demand se non già presente (file locali)
       if (!window.jspdf) {
         const s1 = document.createElement('script');
-        s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s1.src = 'jspdf.umd.min.js';
         s1.onload = () => {
           const s2 = document.createElement('script');
-          s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+          s2.src = 'jspdf.plugin.autotable.min.js';
           s2.onload = exportPdf;
           document.head.appendChild(s2);
         };

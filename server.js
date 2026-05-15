@@ -206,7 +206,14 @@ function attachMeta(records) {
   const meta = loadMeta();
   return records.map(r => {
     const m = meta[String(r.ID)] || {};
-    return { ...r, ...m };
+    return {
+      ...r,
+      ...m,
+      CreatoDa:     m.CreatoDa     || r.Operatore || '',
+      CreatoIl:     m.CreatoIl     || r['Data e Ora Inserimento'] || '',
+      ModificatoDa: m.ModificatoDa || '',
+      ModificatoIl: m.ModificatoIl || '',
+    };
   });
 }
 
