@@ -133,9 +133,9 @@
   </div><!-- /container-fluid -->
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="chart.min.js"></script>
+  <script src="jspdf.umd.min.js"></script>
+  <script src="jspdf.plugin.autotable.min.js"></script>
 
   <script>
     // ── Palette colori coerente ──────────────────────────────────────────────
@@ -334,16 +334,16 @@
       updateKpi(records);
 
       // Grafico cantiere (max 15 per leggibilità)
-      drawBarHorizontal('chartCantiere', 'Record', sortedEntries(groupBy(records, 'Cantiere'), 15));
+      try { drawBarHorizontal('chartCantiere', 'Record', sortedEntries(groupBy(records, 'Cantiere'), 15)); } catch(e) { console.error('chartCantiere:', e); }
 
       // Donut tipo
-      drawDonut('chartTipo', 'Tipo', sortedEntries(groupBy(records, 'Tipo')));
+      try { drawDonut('chartTipo', 'Tipo', sortedEntries(groupBy(records, 'Tipo'))); } catch(e) { console.error('chartTipo:', e); }
 
       // Trend mensile
-      drawLine('chartTrend', 'Inserimenti', monthlyTrend(records));
+      try { drawLine('chartTrend', 'Inserimenti', monthlyTrend(records)); } catch(e) { console.error('chartTrend:', e); }
 
       // Grafico operatore (max 10)
-      drawBarHorizontal('chartOperatore', 'Record', sortedEntries(groupBy(records, 'Operatore'), 10));
+      try { drawBarHorizontal('chartOperatore', 'Record', sortedEntries(groupBy(records, 'Operatore'), 10)); } catch(e) { console.error('chartOperatore:', e); }
 
       updateTopTable(records);
 
@@ -368,6 +368,9 @@
 
     // ── Export PDF ───────────────────────────────────────────────────────────
     async function exportPdf() {
+      const statusLine = document.getElementById('statusLine');
+      try {
+      if (!window.jspdf) throw new Error('Libreria PDF non disponibile (jspdf.umd.min.js mancante).');
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
@@ -429,7 +432,13 @@
         headStyles: { fillColor: [13, 110, 253] },
       });
 
-      doc.save(`dashboard_commissioning_${now.replace(/[/:, ]/g, '-')}.pdf`);
+      const filename = `dashboard_commissioning_${now.replace(/[/:, ]/g, '-')}.pdf`;
+      doc.save(filename);
+      statusLine.textContent = `✓ PDF esportato: ${filename}`;
+      setTimeout(() => refresh(), 3000);
+      } catch(e) {
+        alert('Errore esportazione PDF: ' + e.message);
+      }
     }
 
     // ── Filtri periodo ───────────────────────────────────────────────────────
