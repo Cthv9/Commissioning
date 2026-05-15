@@ -44,6 +44,21 @@
       </div>
 
       <div class="small text-muted mt-2" id="statusLine">Caricamento...</div>
+
+      <div class="d-flex flex-wrap gap-2 align-items-center mt-2" id="filterBar">
+        <select id="filterCantiere" class="form-select form-select-sm" style="min-width:160px; max-width:220px;">
+          <option value="">Tutti i cantieri</option>
+        </select>
+        <select id="filterTipo" class="form-select form-select-sm" style="min-width:160px; max-width:220px;">
+          <option value="">Tutti i tipi</option>
+        </select>
+        <select id="filterOperatore" class="form-select form-select-sm" style="min-width:160px; max-width:220px;">
+          <option value="">Tutti gli operatori</option>
+        </select>
+        <input type="date" id="filterDateFrom" class="form-control form-control-sm" style="width:145px;" title="Data inserimento da">
+        <input type="date" id="filterDateTo"   class="form-control form-control-sm" style="width:145px;" title="Data inserimento a">
+        <button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm d-none">✕ Azzera filtri</button>
+      </div>
     </div>
   </div>
 
@@ -54,14 +69,14 @@
       <table class="table table-bordered table-hover bg-white" id="recordsTable">
         <thead class="table-light">
           <tr>
-            <th style="width: 70px;">ID</th>
-            <th>Cantiere</th>
-            <th>Nome Barca</th>
-            <th>Numero Scafo</th>
+            <th data-sort="ID" style="width:70px; cursor:pointer; user-select:none;">ID <span class="sort-icon">↓</span></th>
+            <th data-sort="Cantiere" style="cursor:pointer; user-select:none;">Cantiere <span class="sort-icon"></span></th>
+            <th data-sort="Nome Barca" style="cursor:pointer; user-select:none;">Nome Barca <span class="sort-icon"></span></th>
+            <th data-sort="Numero Scafo" style="cursor:pointer; user-select:none;">Numero Scafo <span class="sort-icon"></span></th>
             <th>Matricola</th>
-            <th>Tipo</th>
-            <th>Operatore</th>
-            <th style="width: 180px;">Data Inserimento</th>
+            <th data-sort="Tipo" style="cursor:pointer; user-select:none;">Tipo <span class="sort-icon"></span></th>
+            <th data-sort="Operatore" style="cursor:pointer; user-select:none;">Operatore <span class="sort-icon"></span></th>
+            <th data-sort="Data e Ora Inserimento" style="width:180px; cursor:pointer; user-select:none;">Data Inserimento <span class="sort-icon"></span></th>
             <th style="width: 170px;">Azioni</th>
           </tr>
         </thead>
@@ -188,6 +203,10 @@
     let currentEditId = null;
     let editModalInstance = null;
 
+    let sortColumn = 'ID';
+    let sortDirection = 'desc';
+    let filters = { cantiere: '', tipo: '', operatore: '', dateFrom: '', dateTo: '' };
+
     function fmtAuditDate(s) {
       if (!s) return '';
       const d = new Date(s);
@@ -212,28 +231,87 @@
       document.getElementById('statusLine').textContent = text;
     }
 
+    function parseItalianDate(s) {
+      if (!s) return '';
+      const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/);
+      if (!m) return '';
+      return `${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}`;
+    }
+
+    function populateFilterDropdowns() {
+      const fill = (id, values, current) => {
+        const sel = document.getElementById(id);
+        const first = sel.options[0];
+        sel.innerHTML = '';
+        sel.appendChild(first);
+        values.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v; opt.textContent = v;
+          if (v === current) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      };
+      const unique = field => [...new Set(allRecords.map(r => r[field]).filter(Boolean))].sort();
+      fill('filterCantiere', unique('Cantiere'),  filters.cantiere);
+      fill('filterTipo',     unique('Tipo'),      filters.tipo);
+      fill('filterOperatore',unique('Operatore'), filters.operatore);
+    }
+
+    function updateSortIcons() {
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        const icon = th.querySelector('.sort-icon');
+        if (!icon) return;
+        icon.textContent = th.dataset.sort === sortColumn
+          ? (sortDirection === 'asc' ? ' ↑' : ' ↓')
+          : '';
+      });
+    }
+
+    function updateResetBtn() {
+      const active = filters.cantiere || filters.tipo || filters.operatore
+                   || filters.dateFrom || filters.dateTo;
+      document.getElementById('resetFiltersBtn').classList.toggle('d-none', !active);
+    }
+
     function applyFilter(resetPage = false) {
       const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
-      if (!q) {
-        filteredRecords = [...allRecords];
-      } else {
-        filteredRecords = allRecords.filter(r => {
+      let result = allRecords.filter(r => {
+        if (q) {
           const haystack = [
-            r.ID,
-            r.Cantiere,
-            r['Nome Barca'],
-            r['Numero Scafo'],
-            r.Matricola,
-            r.Tipo,
-            r.Operatore,
-            r['Data e Ora Inserimento'],
+            r.ID, r.Cantiere, r['Nome Barca'], r['Numero Scafo'],
+            r.Matricola, r.Tipo, r.Operatore, r['Data e Ora Inserimento'],
           ].join(' ').toLowerCase();
-          return haystack.includes(q);
-        });
-      }
+          if (!haystack.includes(q)) return false;
+        }
+        if (filters.cantiere  && r.Cantiere  !== filters.cantiere)  return false;
+        if (filters.tipo      && r.Tipo      !== filters.tipo)      return false;
+        if (filters.operatore && r.Operatore !== filters.operatore) return false;
+        if (filters.dateFrom || filters.dateTo) {
+          const iso = parseItalianDate(r['Data e Ora Inserimento']);
+          if (filters.dateFrom && iso < filters.dateFrom)                  return false;
+          if (filters.dateTo   && iso > filters.dateTo + 'T23:59:59') return false;
+        }
+        return true;
+      });
 
+      result.sort((a, b) => {
+        let va = a[sortColumn] ?? '';
+        let vb = b[sortColumn] ?? '';
+        if (sortColumn === 'ID') { va = Number(va); vb = Number(vb); }
+        else if (sortColumn === 'Data e Ora Inserimento') {
+          va = parseItalianDate(String(va)) || va;
+          vb = parseItalianDate(String(vb)) || vb;
+        }
+        if (va < vb) return sortDirection === 'asc' ? -1 :  1;
+        if (va > vb) return sortDirection === 'asc' ?  1 : -1;
+        return 0;
+      });
+
+      filteredRecords = result;
       if (resetPage) currentPage = 1;
+      updateSortIcons();
+      updateResetBtn();
       render();
     }
 
@@ -349,9 +427,7 @@
         return;
       }
 
-      // Ultimi inseriti in alto (se ID è progressivo)
-      allRecords.sort((a, b) => (b.ID ?? 0) - (a.ID ?? 0));
-
+      populateFilterDropdowns();
       applyFilter(true);
     }
 
@@ -651,6 +727,47 @@ function openEdit(id) {
         btn.disabled = false;
         btn.textContent = '📥 Importa .df';
       }
+    });
+
+    // Ordinamento colonne
+    document.querySelector('#recordsTable thead').addEventListener('click', e => {
+      const th = e.target.closest('th[data-sort]');
+      if (!th) return;
+      const col = th.dataset.sort;
+      if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = col;
+        sortDirection = 'asc';
+      }
+      applyFilter(false);
+    });
+
+    // Dropdown filtri
+    ['filterCantiere', 'filterTipo', 'filterOperatore'].forEach(id => {
+      document.getElementById(id).addEventListener('change', e => {
+        const key = id.replace('filter', '').toLowerCase();
+        filters[key] = e.target.value;
+        applyFilter(true);
+      });
+    });
+
+    document.getElementById('filterDateFrom').addEventListener('change', e => {
+      filters.dateFrom = e.target.value;
+      applyFilter(true);
+    });
+    document.getElementById('filterDateTo').addEventListener('change', e => {
+      filters.dateTo = e.target.value;
+      applyFilter(true);
+    });
+
+    document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+      filters = { cantiere: '', tipo: '', operatore: '', dateFrom: '', dateTo: '' };
+      ['filterCantiere', 'filterTipo', 'filterOperatore'].forEach(id =>
+        document.getElementById(id).value = '');
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      applyFilter(true);
     });
 
     // Avvio
