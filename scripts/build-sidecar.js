@@ -42,3 +42,16 @@ fs.copyFileSync(serverExe, 'src-tauri/dist/server.exe');
 console.log('Copied server.exe → src-tauri/dist/server.exe');
 
 console.log('Build sidecar completato.');
+
+// Auto-generate tauri.prod.conf.json so the resources list stays in sync with detected files
+const resources = { 'dist/server.exe': 'server.exe' };
+frontendFiles
+  .filter(f => f !== 'server.js') // server.js is backend code, not a frontend asset
+  .forEach(f => { resources[`dist/${f}`] = f; });
+
+const tauriProdConf = { bundle: { resources } };
+fs.writeFileSync(
+  'src-tauri/tauri.prod.conf.json',
+  JSON.stringify(tauriProdConf, null, 2) + '\n'
+);
+console.log(`Generated src-tauri/tauri.prod.conf.json with ${Object.keys(resources).length} resources.`);
