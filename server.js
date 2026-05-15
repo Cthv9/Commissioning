@@ -11,8 +11,8 @@ const AdmZip = require('adm-zip');
  * Percorso share (fonte ufficiale file + Excel)
  * Puoi sovrascriverlo con variabile ambiente PORTALE_ROOT_DIR se necessario.
  */
-const excelRootDir = process.env.PORTALE_ROOT_DIR || '\\\\Fs\\FS\\MAR_SERVICE\\36-Commissioning';
-const excelPath = path.join(excelRootDir, 'Barche_Commissionate.xlsx');
+const excelRootDir = process.env.PORTALE_ROOT_DIR || '';
+const excelPath = path.join(excelRootDir || '.', 'Barche_Commissionate.xlsx');
 
 // Upload root di default: può essere diverso dall'Excel (configurabile)
 const defaultUploadsRootDir = process.env.PORTALE_UPLOADS_DIR || excelRootDir;
@@ -962,6 +962,13 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(3000, '127.0.0.1', () => {
+  if (!process.env.PORTALE_ROOT_DIR) {
+    console.warn(
+      '\n[CONFIGURAZIONE RICHIESTA] La variabile d\'ambiente PORTALE_ROOT_DIR non è impostata.\n' +
+      'Imposta PORTALE_ROOT_DIR con il percorso della cartella condivisa che contiene\n' +
+      'il file Barche_Commissionate.xlsx, oppure configura il percorso nelle Impostazioni.\n'
+    );
+  }
   console.log('Server avviato su http://127.0.0.1:3000/index.html');
   cleanupBackupArtifacts();
   setInterval(cleanupBackupArtifacts, 6 * 60 * 60 * 1000); // ogni 6 ore
