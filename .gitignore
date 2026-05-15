@@ -25,3 +25,5 @@ Portale.url
 Readme.txt
 start_server - Copia.bat
 start_server.bat
+package-lock.json
+src-tauri/Cargo.toml
