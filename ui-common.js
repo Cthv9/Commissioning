@@ -45,29 +45,9 @@ async function dfOpenInfoModal() {
     dfSetText('dfAppVersion', '—');
   }
 
-  dfLoadMergeOptions();
-
   const modalEl = document.getElementById('dfInfoModal');
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
   modal.show();
-}
-
-async function dfLoadMergeOptions() {
-  try {
-    const res = await fetch('/options');
-    if (!res.ok) return;
-    const data = await res.json();
-    dfFillDatalist('dfMergeFromList', data);
-    dfFillDatalist('dfMergeToList', data);
-  } catch {}
-}
-
-function dfFillDatalist(listId, data) {
-  const list = document.getElementById(listId);
-  if (!list) return;
-  const field = document.getElementById('dfMergeField');
-  const values = field ? (data[field.value === 'Cantiere' ? 'cantieri' : 'operatori'] || []) : [];
-  list.replaceChildren(...values.map(v => { const o = document.createElement('option'); o.value = v; return o; }));
 }
 
 async function dfChooseDir() {
@@ -128,81 +108,6 @@ function dfWireInfoButtons() {
 
   const saveBtn = document.getElementById('dfSaveDirBtn');
   if (saveBtn) saveBtn.addEventListener('click', dfSaveDir);
-
-  const reorgBtn = document.getElementById('dfReorgBtn');
-  if (reorgBtn) reorgBtn.addEventListener('click', dfReorganizeFolders);
-
-  const mergeField = document.getElementById('dfMergeField');
-  if (mergeField) mergeField.addEventListener('change', dfLoadMergeOptions);
-
-  const mergeBtn = document.getElementById('dfMergeBtn');
-  if (mergeBtn) mergeBtn.addEventListener('click', dfMergeFieldValue);
-}
-
-async function dfReorganizeFolders() {
-  const btn = document.getElementById('dfReorgBtn');
-  const resultEl = document.getElementById('dfReorgResult');
-  if (btn) { btn.disabled = true; btn.textContent = 'Elaborazione…'; }
-  if (resultEl) resultEl.classList.add('d-none');
-  try {
-    const res = await fetch('/admin/reorganize-folders', { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore server');
-    const movedIds = data.moved.map(m => `ID ${m.id}`).join(', ');
-    if (resultEl) {
-      resultEl.classList.remove('d-none');
-      resultEl.innerHTML =
-        `<span class="text-success fw-semibold">Spostate: ${data.moved.length}</span>` +
-        (data.errors.length ? ` &nbsp;<span class="text-danger">Errori: ${data.errors.length}</span>` : '') +
-        (movedIds ? `<br><span class="text-muted">${movedIds}</span>` : '');
-    }
-  } catch (e) {
-    if (resultEl) {
-      resultEl.classList.remove('d-none');
-      resultEl.innerHTML = `<span class="text-danger">Errore: ${e.message}</span>`;
-    }
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Riorganizza cartelle legacy'; }
-  }
-}
-
-async function dfMergeFieldValue() {
-  const field  = document.getElementById('dfMergeField')?.value;
-  const from   = document.getElementById('dfMergeFrom')?.value.trim();
-  const to     = document.getElementById('dfMergeTo')?.value.trim();
-  const btn    = document.getElementById('dfMergeBtn');
-  const result = document.getElementById('dfMergeResult');
-
-  if (!from || !to) { alert('Compila entrambi i campi "Da" e "A".'); return; }
-  if (!confirm(`Rinominare "${from}" → "${to}" in tutti i record?\nL'operazione modifica il file Excel.`)) return;
-
-  if (btn) { btn.disabled = true; btn.textContent = 'Elaborazione…'; }
-  if (result) result.classList.add('d-none');
-
-  try {
-    const res = await fetch('/admin/rename-field-value', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field, from, to }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore server');
-    if (result) {
-      result.classList.remove('d-none');
-      result.innerHTML = data.count === 0
-        ? `<span class="text-warning">Nessun record trovato con il valore "${from}".</span>`
-        : `<span class="text-success fw-semibold">✓ ${data.count} record aggiornati.</span>`;
-    }
-    document.getElementById('dfMergeFrom').value = '';
-    document.getElementById('dfMergeTo').value = '';
-  } catch (e) {
-    if (result) {
-      result.classList.remove('d-none');
-      result.innerHTML = `<span class="text-danger">Errore: ${e.message}</span>`;
-    }
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Rinomina in tutti i record'; }
-  }
 }
 
 document.addEventListener('DOMContentLoaded', dfWireInfoButtons);
