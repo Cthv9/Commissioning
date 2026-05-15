@@ -950,6 +950,43 @@ app.post('/import-df', dfUpload.single('dfFile'), (req, res) => {
 });
 
 /**
+ * Rinomina un valore di campo in tutti i record (unifica duplicati)
+ */
+app.post('/admin/rename-field-value', (req, res) => {
+  const { field, from, to } = req.body || {};
+  const allowed = ['Cantiere', 'Operatore', 'Tipo'];
+  if (!allowed.includes(field)) return res.status(400).json({ error: 'Campo non consentito.' });
+  const fromStr = String(from || '').trim();
+  const toStr   = String(to   || '').trim();
+  if (!fromStr || !toStr) return res.status(400).json({ error: 'Parametri "da" e "a" obbligatori.' });
+  if (fromStr === toStr)  return res.status(400).json({ error: 'I valori coincidono.' });
+
+  const dataWithMeta = readExcel();
+  const baseRecords = dataWithMeta.map(r => {
+    const out = {};
+    for (const h of BASE_HEADERS) out[h] = r[h] ?? '';
+    return out;
+  });
+
+  let count = 0;
+  for (const r of baseRecords) {
+    if (String(r[field] || '').trim() === fromStr) {
+      r[field] = toStr;
+      count++;
+    }
+  }
+
+  if (count === 0) return res.json({ count: 0 });
+
+  try {
+    writeExcel(baseRecords);
+    res.json({ count });
+  } catch (e) {
+    res.status(500).json({ error: 'Impossibile scrivere Excel: ' + e.message });
+  }
+});
+
+/**
  * Riorganizzazione cartelle legacy (struttura piatta → cantiere/categoria/record)
  */
 app.post('/admin/reorganize-folders', (req, res) => {

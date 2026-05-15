@@ -489,6 +489,21 @@
             <button id="dfReorgBtn" class="btn btn-outline-warning btn-sm w-100">Riorganizza cartelle legacy</button>
             <div id="dfReorgResult" class="mt-2 small d-none"></div>
           </div>
+          <div class="border-top pt-3 mt-3">
+            <h6 class="mb-2">Unifica valori duplicati</h6>
+            <p class="small text-muted mb-2">Rinomina un operatore o cantiere in tutti i record (es. unifica "AFG MARINE" e "AFG Marine srl").</p>
+            <select id="dfMergeField" class="form-select form-select-sm mb-2">
+              <option value="Operatore">Operatore</option>
+              <option value="Cantiere">Cantiere</option>
+            </select>
+            <input id="dfMergeFrom" class="form-control form-control-sm mb-2" placeholder="Da (valore attuale)" list="dfMergeFromList" autocomplete="off">
+            <datalist id="dfMergeFromList"></datalist>
+            <input id="dfMergeTo" class="form-control form-control-sm mb-2" placeholder="A (nuovo valore)" list="dfMergeToList" autocomplete="off">
+            <datalist id="dfMergeToList"></datalist>
+            <button id="dfMergeBtn" class="btn btn-outline-danger btn-sm w-100">Rinomina in tutti i record</button>
+            <div id="dfMergeResult" class="mt-2 small d-none"></div>
+          </div>
+
           <div class="mt-4 text-center">
             <small class="text-muted">Made with ❤️ by DF</small>
           </div>
