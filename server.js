@@ -209,8 +209,8 @@ function attachMeta(records) {
     return {
       ...r,
       ...m,
-      CreatoDa:     m.CreatoDa     || r.Operatore || '',
-      CreatoIl:     m.CreatoIl     || r['Data e Ora Inserimento'] || '',
+      CreatoDa:     m.CreatoDa     || '',
+      CreatoIl:     m.CreatoIl     || '',
       ModificatoDa: m.ModificatoDa || '',
       ModificatoIl: m.ModificatoIl || '',
     };
@@ -946,6 +946,58 @@ app.post('/import-df', dfUpload.single('dfFile'), (req, res) => {
     res.status(500).json({ error: 'Errore durante l\'importazione: ' + err.message });
   } finally {
     try { fs.unlinkSync(dfPath); } catch {}
+  }
+});
+
+/**
+ * Riorganizzazione cartelle legacy (struttura piatta → cantiere/categoria/record)
+ */
+app.post('/admin/reorganize-folders', (req, res) => {
+  try {
+    const records = readExcel();
+    const uploadsRoot = getUploadsRootDir();
+    const moved = [];
+    const skipped = [];
+    const errors = [];
+
+    for (const record of records) {
+      const expectedPath = getRecordFolder(record);
+
+      if (fs.existsSync(expectedPath)) {
+        skipped.push({ id: record.ID, reason: 'già in posizione corretta' });
+        continue;
+      }
+
+      const dirName = `${record.Cantiere}_${record['Nome Barca']}_${record['Numero Scafo']}`;
+      const recordFolderName = safeFilenamePart(dirName);
+      const flatPath = path.join(uploadsRoot, recordFolderName);
+
+      if (!fs.existsSync(flatPath)) {
+        skipped.push({ id: record.ID, reason: 'cartella non trovata' });
+        continue;
+      }
+
+      try {
+        ensureDir(path.dirname(expectedPath));
+        try {
+          fs.renameSync(flatPath, expectedPath);
+        } catch (e) {
+          if (e.code === 'EXDEV') {
+            fs.cpSync(flatPath, expectedPath, { recursive: true });
+            fs.rmSync(flatPath, { recursive: true, force: true });
+          } else {
+            throw e;
+          }
+        }
+        moved.push({ id: record.ID, from: flatPath, to: expectedPath });
+      } catch (e) {
+        errors.push({ id: record.ID, error: e.message });
+      }
+    }
+
+    res.json({ moved, skipped, errors });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

@@ -108,6 +108,36 @@ function dfWireInfoButtons() {
 
   const saveBtn = document.getElementById('dfSaveDirBtn');
   if (saveBtn) saveBtn.addEventListener('click', dfSaveDir);
+
+  const reorgBtn = document.getElementById('dfReorgBtn');
+  if (reorgBtn) reorgBtn.addEventListener('click', dfReorganizeFolders);
+}
+
+async function dfReorganizeFolders() {
+  const btn = document.getElementById('dfReorgBtn');
+  const resultEl = document.getElementById('dfReorgResult');
+  if (btn) { btn.disabled = true; btn.textContent = 'Elaborazione…'; }
+  if (resultEl) resultEl.classList.add('d-none');
+  try {
+    const res = await fetch('/admin/reorganize-folders', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore server');
+    const movedIds = data.moved.map(m => `ID ${m.id}`).join(', ');
+    if (resultEl) {
+      resultEl.classList.remove('d-none');
+      resultEl.innerHTML =
+        `<span class="text-success fw-semibold">Spostate: ${data.moved.length}</span>` +
+        (data.errors.length ? ` &nbsp;<span class="text-danger">Errori: ${data.errors.length}</span>` : '') +
+        (movedIds ? `<br><span class="text-muted">${movedIds}</span>` : '');
+    }
+  } catch (e) {
+    if (resultEl) {
+      resultEl.classList.remove('d-none');
+      resultEl.innerHTML = `<span class="text-danger">Errore: ${e.message}</span>`;
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Riorganizza cartelle legacy'; }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', dfWireInfoButtons);

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuovo Commissioning | Portale Commissioning</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; min-height: 100vh; padding: 12px; display: flex; flex-direction: column; align-items: center; }
+    .form-card { background: white; padding: 20px 28px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,.1); width: min(680px, 100%); margin-top: 12px; }
+    @media (max-width: 576px) { body { padding: 8px; } .form-card { padding: 16px; } }
+    h1 { text-align: center; color: #495057; margin-bottom: 16px; font-size: 1.4rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div class="sticky-top bg-white border-bottom w-100">
+    <div class="container-fluid py-2">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="index.html" class="btn btn-outline-secondary btn-sm">← Home</a>
+        <a href="manage.html" class="btn btn-outline-secondary btn-sm">Archivio</a>
+        <a href="dashboard.html" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+        <strong class="ms-1 text-primary">Nuovo Commissioning</strong>
+        <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info title="Impostazioni"><span style="font-size:20px;">ℹ️</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h1>Inserisci nuovo commissioning</h1>
+
+    <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="POST">
+      <div class="row g-2 mb-2">
+        <div class="col-7">
+          <label for="cantiere" class="form-label mb-1">Cantiere Costruttore <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="cantiere" name="cantiere" list="cantiereList" autocomplete="off" required>
+          <datalist id="cantiereList"></datalist>
+          <div class="form-text" style="font-size:0.75rem;">Suggerimenti automatici (riduce refusi)</div>
+        </div>
+        <div class="col-5">
+          <label for="nomeBarca" class="form-label mb-1">Nome Barca <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="nomeBarca" name="nomeBarca" required>
+        </div>
+      </div>
+
+      <div class="row g-2 mb-2">
+        <div class="col-5">
+          <label for="numeroScafo" class="form-label mb-1">Numero Scafo <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="numeroScafo" name="numeroScafo" required>
+        </div>
+        <div class="col-4">
+          <label for="matricola" class="form-label mb-1">Matricola</label>
+          <input type="text" class="form-control form-control-sm" id="matricola" name="matricola">
+        </div>
+        <div class="col-3">
+          <label for="tipo" class="form-label mb-1">Tipo <span class="text-danger">*</span></label>
+          <select class="form-select form-select-sm" id="tipo" name="tipo" required>
+            <option value="Primo Avviamento">Primo Avviamento</option>
+            <option value="Primo Commissioning">Primo Commissioning</option>
+            <option value="Commissioning">Commissioning</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-2">
+        <label for="operatore" class="form-label mb-1">Operatore <span class="text-danger">*</span></label>
+        <input type="text" class="form-control form-control-sm" id="operatore" name="operatore" list="operatoreList" autocomplete="off" required>
+        <datalist id="operatoreList"></datalist>
+      </div>
+
+      <div class="mb-2">
+        <label for="fileInput" class="form-label mb-1">Carica file <span class="text-danger">*</span></label>
+        <input type="file" class="form-control form-control-sm" id="fileInput" name="files[]" multiple required>
+      </div>
+
+      <div class="progress mb-2" style="height:18px;">
+        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-sm w-100">Invia</button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="script.js"></script>
+  <script src="ui-common.js"></script>
+
+  <!-- Info / Impostazioni -->
+  <div class="modal fade" id="dfInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Impostazioni</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">Il portale consente di registrare i <strong>commissioning</strong> e archiviare i relativi allegati, salvando i dati in un file Excel e organizzando automaticamente le cartelle.</p>
+          <p class="mb-3"><small class="text-muted">Versione <span id="dfAppVersion">v?</span></small></p>
+
+          <div class="border-top pt-3">
+            <h6 class="mb-2">Destinazione caricamenti</h6>
+            <div class="input-group">
+              <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\Server\Share\Cartella" />
+              <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button">Scegli…</button>
+              <button id="dfSaveDirBtn" class="btn btn-primary" type="button">Salva</button>
+            </div>
+            <div class="form-text">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
+          </div>
+
+          <div class="border-top pt-3 mt-3">
+            <h6 class="mb-2">Manutenzione cartelle</h6>
+            <p class="small text-muted mb-2">Sposta le cartelle create con versioni precedenti nella struttura corretta per cantiere e categoria.</p>
+            <button id="dfReorgBtn" class="btn btn-outline-warning btn-sm w-100">Riorganizza cartelle legacy</button>
+            <div id="dfReorgResult" class="mt-2 small d-none"></div>
+          </div>
+
+          <div class="mt-4 text-center">
+            <small class="text-muted">Made with ❤️ by DF</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

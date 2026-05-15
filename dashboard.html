@@ -25,7 +25,8 @@
   <div class="sticky-top bg-white border-bottom">
     <div class="container-fluid py-2">
       <div class="d-flex flex-wrap gap-2 align-items-center">
-        <a href="index.html" class="btn btn-outline-secondary btn-sm">← Nuovo</a>
+        <a href="index.html" class="btn btn-outline-secondary btn-sm">← Home</a>
+        <a href="nuovo.html" class="btn btn-outline-secondary btn-sm">Nuovo</a>
         <a href="manage.html" class="btn btn-outline-secondary btn-sm">Archivio</a>
         <strong class="ms-1 text-primary">Dashboard</strong>
 
@@ -474,14 +475,19 @@
             <small class="text-muted">Versione <span id="dfAppVersion">v?</span></small>
           </p>
           <div class="border-top pt-3">
-            <h6 class="mb-2">Impostazioni</h6>
-            <label class="form-label">Destinazione caricamenti</label>
+            <h6 class="mb-2">Destinazione caricamenti</h6>
             <div class="input-group">
               <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\Server\Share\Cartella" />
               <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button">Scegli…</button>
               <button id="dfSaveDirBtn" class="btn btn-primary" type="button">Salva</button>
             </div>
-            <div class="form-text">Cambia la cartella base dove vengono create le cartelle dei commissioning.</div>
+            <div class="form-text">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
+          </div>
+          <div class="border-top pt-3 mt-3">
+            <h6 class="mb-2">Manutenzione cartelle</h6>
+            <p class="small text-muted mb-2">Sposta le cartelle create con versioni precedenti nella struttura corretta per cantiere e categoria.</p>
+            <button id="dfReorgBtn" class="btn btn-outline-warning btn-sm w-100">Riorganizza cartelle legacy</button>
+            <div id="dfReorgResult" class="mt-2 small d-none"></div>
           </div>
           <div class="mt-4 text-center">
             <small class="text-muted">Made with ❤️ by DF</small>
