@@ -12,7 +12,7 @@ App desktop Windows per la registrazione e gestione dei record di commissioning 
 - Portale slave (sola lettura) per tecnici: compila il modulo e genera un pacchetto `.df` da importare
 - PWA installabile da browser per il portale slave (`docs/`): funziona offline e si installa come app nativa
 - Backup automatico in formato JSON + copie rotanti del file Excel
-- Sincronizzazione con file Excel `Barche_Commissionate.xlsx` su share di rete
+- Sincronizzazione con file Excel su share di rete configurabile
 - Selezione cartella di destinazione upload tramite dialog nativa
 
 ## Stack tecnico
@@ -105,6 +105,6 @@ src-tauri/target/release/bundle/nsis/Portale Commissioning_2.0.0_x64-setup.exe
 | Percorso | Contenuto |
 |---------|-----------|
 | `%APPDATA%\Portale Commissioning\backup\` | Backup JSON, snapshot, metadati |
-| `\\Fs\FS\MAR_SERVICE\36-Commissioning\` | Share di rete (Excel + allegati) |
+| *(share di rete configurabile)* | File Excel + allegati |
 
 Il percorso della share di rete è configurabile tramite il pannello impostazioni nell'app (icona ℹ️).
