@@ -20,8 +20,10 @@
   <div class="sticky-top bg-white border-bottom">
     <div class="container-fluid py-2">
       <div class="d-flex flex-wrap gap-2 align-items-center">
-        <a href="index.html" class="btn btn-primary">← Nuovo commissioning</a>
-        <a href="dashboard.html" class="btn btn-outline-primary" title="Dashboard Analytics">📊 Dashboard</a>
+        <a href="index.html" class="btn btn-outline-secondary btn-sm">← Home</a>
+        <a href="nuovo.html" class="btn btn-outline-secondary btn-sm">Nuovo</a>
+        <a href="dashboard.html" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+        <strong class="ms-1 text-primary">Archivio</strong>
 
         <div class="flex-grow-1" style="min-width: 240px;">
           <input id="searchInput" class="form-control" placeholder="Cerca (cantiere, barca, scafo, operatore...)">
@@ -518,12 +520,14 @@ function openEdit(id) {
       // UTF-8 BOM per compatibilità Excel
       const bom = '﻿';
       const blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const filename = `commissioning_${new Date().toISOString().slice(0,10)}.csv`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `commissioning_${new Date().toISOString().slice(0,10)}.csv`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+      showToast(`✓ CSV esportato: <strong>${filename}</strong>`, 'success');
     }
 
     // ── Export PDF ────────────────────────────────────────────────────────────
@@ -561,7 +565,9 @@ function openEdit(id) {
         alternateRowStyles: { fillColor: [248, 249, 250] },
       });
 
-      doc.save(`commissioning_${new Date().toISOString().slice(0,10)}.pdf`);
+      const pdfFilename = `commissioning_${new Date().toISOString().slice(0,10)}.pdf`;
+      doc.save(pdfFilename);
+      showToast(`✓ PDF esportato: <strong>${pdfFilename}</strong>`, 'success');
     }
 
     document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
@@ -669,16 +675,20 @@ function openEdit(id) {
         </p>
 
         <div class="border-top pt-3">
-          <h6 class="mb-2">Impostazioni</h6>
-          <label class="form-label">Destinazione caricamenti</label>
+          <h6 class="mb-2">Destinazione caricamenti</h6>
           <div class="input-group">
-            <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\\\Server\\Share\\Cartella" />
+            <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\Server\Share\Cartella" />
             <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button">Scegli…</button>
             <button id="dfSaveDirBtn" class="btn btn-primary" type="button">Salva</button>
           </div>
-          <div class="form-text">
-            Cambia la cartella base dove vengono create le cartelle dei commissioning e salvati gli allegati.
-          </div>
+          <div class="form-text">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
+        </div>
+
+        <div class="border-top pt-3 mt-3">
+          <h6 class="mb-2">Manutenzione cartelle</h6>
+          <p class="small text-muted mb-2">Sposta le cartelle create con versioni precedenti nella struttura corretta per cantiere e categoria.</p>
+          <button id="dfReorgBtn" class="btn btn-outline-warning btn-sm w-100">Riorganizza cartelle legacy</button>
+          <div id="dfReorgResult" class="mt-2 small d-none"></div>
         </div>
 
         <div class="mt-4 text-center">
