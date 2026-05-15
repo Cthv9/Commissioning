@@ -2,9 +2,17 @@
   "bundle": {
     "resources": {
       "dist/server.exe": "server.exe",
+      "dist/chart.min.js": "chart.min.js",
+      "dist/dashboard.html": "dashboard.html",
+      "dist/import_df.js": "import_df.js",
       "dist/index.html": "index.html",
+      "dist/jspdf.plugin.autotable.min.js": "jspdf.plugin.autotable.min.js",
+      "dist/jspdf.umd.min.js": "jspdf.umd.min.js",
       "dist/manage.html": "manage.html",
+      "dist/nuovo.html": "nuovo.html",
+      "dist/rebuild_excel.js": "rebuild_excel.js",
       "dist/script.js": "script.js",
+      "dist/slave.html": "slave.html",
       "dist/ui-common.js": "ui-common.js"
     }
   }
