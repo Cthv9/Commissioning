@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portale Commissioning</title>
+  <title data-i18n="index.title">Portale Commissioning</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background: #f0f4f8; min-height: 100vh; }
@@ -18,15 +18,15 @@
   <!-- Navbar -->
   <div class="bg-white border-bottom">
     <div class="container-fluid py-2 d-flex align-items-center">
-      <strong class="text-primary">Portale Commissioning</strong>
-      <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info title="Impostazioni"><span style="font-size:20px;">ℹ️</span></a>
+      <strong class="text-primary" data-i18n="index.brand">Portale Commissioning</strong>
+      <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info data-i18n-attr="title:info.button.settings" title="Impostazioni"><span style="font-size:20px;">ℹ️</span></a>
     </div>
   </div>
 
   <!-- Hero -->
   <div class="container py-5">
-    <h1 class="text-center fw-bold text-primary mb-1">Portale Commissioning</h1>
-    <p class="text-center text-muted mb-5">Seleziona un'operazione per iniziare</p>
+    <h1 class="text-center fw-bold text-primary mb-1" data-i18n="index.title">Portale Commissioning</h1>
+    <p class="text-center text-muted mb-5" data-i18n="index.subtitle">Seleziona un'operazione per iniziare</p>
 
     <div class="row g-4 justify-content-center">
 
@@ -35,8 +35,8 @@
           <div class="card h-100 border-primary">
             <div class="card-body text-center py-5">
               <div class="hero-icon mb-3">➕</div>
-              <h4 class="text-primary fw-semibold">Nuovo Commissioning</h4>
-              <p class="text-muted small mb-0">Registra un nuovo intervento e carica i file allegati</p>
+              <h4 class="text-primary fw-semibold" data-i18n="index.new.title">Nuovo Commissioning</h4>
+              <p class="text-muted small mb-0" data-i18n="index.new.desc">Registra un nuovo intervento e carica i file allegati</p>
             </div>
           </div>
         </a>
@@ -47,8 +47,8 @@
           <div class="card h-100 border-success">
             <div class="card-body text-center py-5">
               <div class="hero-icon mb-3">📋</div>
-              <h4 class="text-success fw-semibold">Archivio</h4>
-              <p class="text-muted small mb-0">Cerca, modifica ed esporta i commissioning registrati</p>
+              <h4 class="text-success fw-semibold" data-i18n="index.archive.title">Archivio</h4>
+              <p class="text-muted small mb-0" data-i18n="index.archive.desc">Cerca, modifica ed esporta i commissioning registrati</p>
             </div>
           </div>
         </a>
@@ -59,8 +59,8 @@
           <div class="card h-100 border-info">
             <div class="card-body text-center py-5">
               <div class="hero-icon mb-3">📊</div>
-              <h4 class="text-info fw-semibold">Dashboard</h4>
-              <p class="text-muted small mb-0">Statistiche, grafici e Top 10 cantieri</p>
+              <h4 class="text-info fw-semibold" data-i18n="index.dashboard.title">Dashboard</h4>
+              <p class="text-muted small mb-0" data-i18n="index.dashboard.desc">Statistiche, grafici e Top 10 cantieri</p>
             </div>
           </div>
         </a>
@@ -70,6 +70,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="i18n.js"></script>
   <script src="ui-common.js"></script>
 
   <!-- Info / Impostazioni -->
@@ -77,25 +78,25 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Impostazioni</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+          <h5 class="modal-title" data-i18n="info.title.settings">Impostazioni</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-attr="aria-label:common.close" aria-label="Chiudi"></button>
         </div>
         <div class="modal-body">
-          <p class="mb-2">Il portale consente di registrare i <strong>commissioning</strong> e archiviare i relativi allegati, salvando i dati in un file Excel e organizzando automaticamente le cartelle.</p>
-          <p class="mb-3"><small class="text-muted">Versione <span id="dfAppVersion">v?</span></small></p>
+          <p class="mb-2" data-i18n-html="info.description">Il portale consente di registrare i <strong>commissioning</strong> e archiviare i relativi allegati, salvando i dati in un file Excel e organizzando automaticamente le cartelle.</p>
+          <p class="mb-3"><small class="text-muted"><span data-i18n="info.version">Versione</span> <span id="dfAppVersion">v?</span></small></p>
 
           <div class="border-top pt-3">
-            <h6 class="mb-2">Destinazione caricamenti</h6>
+            <h6 class="mb-2" data-i18n="info.dest.title">Destinazione caricamenti</h6>
             <div class="input-group">
-              <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\Server\Share\Cartella" />
-              <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button">Scegli…</button>
-              <button id="dfSaveDirBtn" class="btn btn-primary" type="button">Salva</button>
+              <input id="dfUploadsRootDir" class="form-control" data-i18n-attr="placeholder:info.dest.placeholder" placeholder="Es. \\Server\Share\Cartella" />
+              <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button" data-i18n="info.dest.choose">Scegli…</button>
+              <button id="dfSaveDirBtn" class="btn btn-primary" type="button" data-i18n="common.save">Salva</button>
             </div>
-            <div class="form-text">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
+            <div class="form-text" data-i18n="info.dest.help">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
           </div>
 
           <div class="mt-4 text-center">
-            <small class="text-muted">Made with ❤️ by DF</small>
+            <small class="text-muted" data-i18n="info.madeWith">Made with ❤️ by DF</small>
           </div>
         </div>
       </div>

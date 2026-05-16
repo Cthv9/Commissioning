@@ -1,3 +1,10 @@
+function dfT(key, params) {
+  if (window.DF_I18N && typeof window.DF_I18N.t === 'function') {
+    return window.DF_I18N.t(key, params);
+  }
+  return key;
+}
+
 function populateDatalist(datalistId, values) {
   const dl = document.getElementById(datalistId);
   if (!dl) return;
@@ -60,7 +67,7 @@ document.getElementById('uploadForm').addEventListener('submit', async (event) =
   const files = document.getElementById('fileInput').files;
 
   if (!files || files.length === 0) {
-    alert('Seleziona almeno un file.');
+    alert(dfT('nuovo.error.noFile'));
     return;
   }
 
@@ -104,18 +111,19 @@ document.getElementById('uploadForm').addEventListener('submit', async (event) =
         if (norm) {
           const msgs = [];
           if (norm.cantiere) {
-            msgs.push(`Cantiere corretto: "${norm.cantiere.from}" → "${norm.cantiere.to}"`);
+            msgs.push(dfT('nuovo.norm.cantiere', { from: norm.cantiere.from, to: norm.cantiere.to }));
           }
           if (norm.operatore) {
-            msgs.push(`Operatore corretto: "${norm.operatore.from}" → "${norm.operatore.to}"`);
+            msgs.push(dfT('nuovo.norm.operatore', { from: norm.operatore.from, to: norm.operatore.to }));
           }
           if (msgs.length) alert(msgs.join('\n'));
         }
 
-        alert('File caricati con successo!');
+        alert(dfT('nuovo.success.upload'));
         progressBar.style.width = '100%';
-        progressBar.innerText = 'Caricamento completato!';
-        submitButton.innerText = 'Reset';
+        progressBar.innerText = dfT('nuovo.success.completed');
+        submitButton.removeAttribute('data-i18n');
+        submitButton.innerText = dfT('nuovo.reset');
         submitButton.classList.replace('btn-primary', 'btn-secondary');
 
         // Aggiorna cache suggerimenti
@@ -135,12 +143,13 @@ document.getElementById('uploadForm').addEventListener('submit', async (event) =
           progressBar.style.width = '0%';
           progressBar.innerText = '0%';
           progressBar.setAttribute('aria-valuenow', '0');
-          submitButton.innerText = 'Invia';
+          submitButton.setAttribute('data-i18n', 'nuovo.submit');
+          submitButton.innerText = dfT('nuovo.submit');
           submitButton.classList.replace('btn-secondary', 'btn-primary');
           submitButton.disabled = false;
         }, { once: true });
       } else {
-        alert('Errore nel caricamento dei file.');
+        alert(dfT('nuovo.error.upload'));
       }
     };
 
@@ -149,13 +158,13 @@ document.getElementById('uploadForm').addEventListener('submit', async (event) =
       progressBar.style.width = '0%';
       progressBar.innerText = '0%';
       progressBar.setAttribute('aria-valuenow', '0');
-      alert('Errore di rete.');
+      alert(dfT('nuovo.error.network'));
     };
 
     xhr.send(formData);
   } catch (error) {
     console.error('Errore:', error);
     submitButton.disabled = false;
-    alert('Errore imprevisto.');
+    alert(dfT('nuovo.error.unexpected'));
   }
 });

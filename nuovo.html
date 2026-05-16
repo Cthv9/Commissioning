@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nuovo Commissioning | Portale Commissioning</title>
+  <title data-i18n="nuovo.title.tab">Nuovo Commissioning | Portale Commissioning</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background-color: #f8f9fa; min-height: 100vh; padding: 12px; display: flex; flex-direction: column; align-items: center; }
@@ -18,59 +18,59 @@
   <div class="sticky-top bg-white border-bottom w-100">
     <div class="container-fluid py-2">
       <div class="d-flex flex-wrap gap-2 align-items-center">
-        <a href="index.html" class="btn btn-outline-secondary btn-sm">← Home</a>
-        <a href="manage.html" class="btn btn-outline-secondary btn-sm">Archivio</a>
-        <a href="dashboard.html" class="btn btn-outline-secondary btn-sm">Dashboard</a>
-        <strong class="ms-1 text-primary">Nuovo Commissioning</strong>
-        <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info title="Impostazioni"><span style="font-size:20px;">ℹ️</span></a>
+        <a href="index.html" class="btn btn-outline-secondary btn-sm" data-i18n="common.home">← Home</a>
+        <a href="manage.html" class="btn btn-outline-secondary btn-sm" data-i18n="common.archive">Archivio</a>
+        <a href="dashboard.html" class="btn btn-outline-secondary btn-sm" data-i18n="common.dashboard">Dashboard</a>
+        <strong class="ms-1 text-primary" data-i18n="nuovo.brand">Nuovo Commissioning</strong>
+        <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info data-i18n-attr="title:info.button.settings" title="Impostazioni"><span style="font-size:20px;">ℹ️</span></a>
       </div>
     </div>
   </div>
 
   <div class="form-card">
-    <h1>Inserisci nuovo commissioning</h1>
+    <h1 data-i18n="nuovo.heading">Inserisci nuovo commissioning</h1>
 
     <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="POST">
       <div class="row g-2 mb-2">
         <div class="col-7">
-          <label for="cantiere" class="form-label mb-1">Cantiere Costruttore <span class="text-danger">*</span></label>
+          <label for="cantiere" class="form-label mb-1"><span data-i18n="nuovo.label.cantiere">Cantiere Costruttore</span> <span class="text-danger">*</span></label>
           <input type="text" class="form-control form-control-sm" id="cantiere" name="cantiere" list="cantiereList" autocomplete="off" required>
           <datalist id="cantiereList"></datalist>
-          <div class="form-text" style="font-size:0.75rem;">Suggerimenti automatici (riduce refusi)</div>
+          <div class="form-text" style="font-size:0.75rem;" data-i18n="nuovo.label.suggest">Suggerimenti automatici (riduce refusi)</div>
         </div>
         <div class="col-5">
-          <label for="nomeBarca" class="form-label mb-1">Nome Barca <span class="text-danger">*</span></label>
+          <label for="nomeBarca" class="form-label mb-1"><span data-i18n="nuovo.label.nomeBarca">Nome Barca</span> <span class="text-danger">*</span></label>
           <input type="text" class="form-control form-control-sm" id="nomeBarca" name="nomeBarca" required>
         </div>
       </div>
 
       <div class="row g-2 mb-2">
         <div class="col-5">
-          <label for="numeroScafo" class="form-label mb-1">Numero Scafo <span class="text-danger">*</span></label>
+          <label for="numeroScafo" class="form-label mb-1"><span data-i18n="nuovo.label.numeroScafo">Numero Scafo</span> <span class="text-danger">*</span></label>
           <input type="text" class="form-control form-control-sm" id="numeroScafo" name="numeroScafo" required>
         </div>
         <div class="col-4">
-          <label for="matricola" class="form-label mb-1">Matricola</label>
+          <label for="matricola" class="form-label mb-1" data-i18n="nuovo.label.matricola">Matricola</label>
           <input type="text" class="form-control form-control-sm" id="matricola" name="matricola">
         </div>
         <div class="col-3">
-          <label for="tipo" class="form-label mb-1">Tipo <span class="text-danger">*</span></label>
+          <label for="tipo" class="form-label mb-1"><span data-i18n="nuovo.label.tipo">Tipo</span> <span class="text-danger">*</span></label>
           <select class="form-select form-select-sm" id="tipo" name="tipo" required>
-            <option value="Primo Avviamento">Primo Avviamento</option>
-            <option value="Primo Commissioning">Primo Commissioning</option>
-            <option value="Commissioning">Commissioning</option>
+            <option value="Primo Avviamento" data-i18n="nuovo.tipo.primoAvviamento">Primo Avviamento</option>
+            <option value="Primo Commissioning" data-i18n="nuovo.tipo.primoCommissioning">Primo Commissioning</option>
+            <option value="Commissioning" data-i18n="nuovo.tipo.commissioning">Commissioning</option>
           </select>
         </div>
       </div>
 
       <div class="mb-2">
-        <label for="operatore" class="form-label mb-1">Operatore <span class="text-danger">*</span></label>
+        <label for="operatore" class="form-label mb-1"><span data-i18n="nuovo.label.operatore">Operatore</span> <span class="text-danger">*</span></label>
         <input type="text" class="form-control form-control-sm" id="operatore" name="operatore" list="operatoreList" autocomplete="off" required>
         <datalist id="operatoreList"></datalist>
       </div>
 
       <div class="mb-2">
-        <label for="fileInput" class="form-label mb-1">Carica file <span class="text-danger">*</span></label>
+        <label for="fileInput" class="form-label mb-1"><span data-i18n="nuovo.label.files">Carica file</span> <span class="text-danger">*</span></label>
         <input type="file" class="form-control form-control-sm" id="fileInput" name="files[]" multiple required>
       </div>
 
@@ -78,11 +78,12 @@
         <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-sm w-100">Invia</button>
+      <button type="submit" class="btn btn-primary btn-sm w-100" data-i18n="nuovo.submit">Invia</button>
     </form>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="i18n.js"></script>
   <script src="script.js"></script>
   <script src="ui-common.js"></script>
 
@@ -91,25 +92,25 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Impostazioni</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+          <h5 class="modal-title" data-i18n="info.title.settings">Impostazioni</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-attr="aria-label:common.close" aria-label="Chiudi"></button>
         </div>
         <div class="modal-body">
-          <p class="mb-2">Il portale consente di registrare i <strong>commissioning</strong> e archiviare i relativi allegati, salvando i dati in un file Excel e organizzando automaticamente le cartelle.</p>
-          <p class="mb-3"><small class="text-muted">Versione <span id="dfAppVersion">v?</span></small></p>
+          <p class="mb-2" data-i18n-html="info.description">Il portale consente di registrare i <strong>commissioning</strong> e archiviare i relativi allegati, salvando i dati in un file Excel e organizzando automaticamente le cartelle.</p>
+          <p class="mb-3"><small class="text-muted"><span data-i18n="info.version">Versione</span> <span id="dfAppVersion">v?</span></small></p>
 
           <div class="border-top pt-3">
-            <h6 class="mb-2">Destinazione caricamenti</h6>
+            <h6 class="mb-2" data-i18n="info.dest.title">Destinazione caricamenti</h6>
             <div class="input-group">
-              <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\Server\Share\Cartella" />
-              <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button">Scegli…</button>
-              <button id="dfSaveDirBtn" class="btn btn-primary" type="button">Salva</button>
+              <input id="dfUploadsRootDir" class="form-control" data-i18n-attr="placeholder:info.dest.placeholder" placeholder="Es. \\Server\Share\Cartella" />
+              <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button" data-i18n="info.dest.choose">Scegli…</button>
+              <button id="dfSaveDirBtn" class="btn btn-primary" type="button" data-i18n="common.save">Salva</button>
             </div>
-            <div class="form-text">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
+            <div class="form-text" data-i18n="info.dest.help">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
           </div>
 
           <div class="mt-4 text-center">
-            <small class="text-muted">Made with ❤️ by DF</small>
+            <small class="text-muted" data-i18n="info.madeWith">Made with ❤️ by DF</small>
           </div>
         </div>
       </div>

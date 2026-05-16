@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Archivio Commissioning</title>
+  <title data-i18n="manage.title">Archivio Commissioning</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background: #f8f9fa; }
@@ -20,64 +20,64 @@
   <div class="sticky-top bg-white border-bottom">
     <div class="container-fluid py-2">
       <div class="d-flex flex-wrap gap-2 align-items-center">
-        <a href="index.html" class="btn btn-outline-secondary btn-sm">← Home</a>
-        <a href="nuovo.html" class="btn btn-outline-secondary btn-sm">Nuovo</a>
-        <a href="dashboard.html" class="btn btn-outline-secondary btn-sm">Dashboard</a>
-        <strong class="ms-1 text-primary">Archivio</strong>
+        <a href="index.html" class="btn btn-outline-secondary btn-sm" data-i18n="common.home">← Home</a>
+        <a href="nuovo.html" class="btn btn-outline-secondary btn-sm" data-i18n="common.new">Nuovo</a>
+        <a href="dashboard.html" class="btn btn-outline-secondary btn-sm" data-i18n="common.dashboard">Dashboard</a>
+        <strong class="ms-1 text-primary" data-i18n="manage.brand">Archivio</strong>
 
         <div class="flex-grow-1" style="min-width: 240px;">
-          <input id="searchInput" class="form-control" placeholder="Cerca (cantiere, barca, scafo, operatore...)">
+          <input id="searchInput" class="form-control" data-i18n-attr="placeholder:manage.searchPlaceholder" placeholder="Cerca (cantiere, barca, scafo, operatore...)">
         </div>
 
         <select id="pageSizeSelect" class="form-select" style="width: auto;">
-          <option value="25">25 / pagina</option>
-          <option value="50" selected>50 / pagina</option>
-          <option value="100">100 / pagina</option>
+          <option value="25" data-i18n="manage.pageSize.25">25 / pagina</option>
+          <option value="50" selected data-i18n="manage.pageSize.50">50 / pagina</option>
+          <option value="100" data-i18n="manage.pageSize.100">100 / pagina</option>
         </select>
 
-        <button id="refreshBtn" class="btn btn-outline-secondary">Aggiorna</button>
-        <button id="exportCsvBtn" class="btn btn-outline-success" title="Esporta CSV (dati filtrati)">CSV</button>
-        <button id="exportPdfBtn" class="btn btn-outline-danger" title="Esporta PDF (dati filtrati)">PDF</button>
-        <button id="importDfBtn" class="btn btn-outline-primary" title="Importa pacchetto .df dal portale remoto">📥 Importa .df</button>
+        <button id="refreshBtn" class="btn btn-outline-secondary" data-i18n="manage.refresh">Aggiorna</button>
+        <button id="exportCsvBtn" class="btn btn-outline-success" data-i18n-attr="title:manage.exportCsv.title" title="Esporta CSV (dati filtrati)">CSV</button>
+        <button id="exportPdfBtn" class="btn btn-outline-danger" data-i18n-attr="title:manage.exportPdf.title" title="Esporta PDF (dati filtrati)">PDF</button>
+        <button id="importDfBtn" class="btn btn-outline-primary" data-i18n-attr="title:manage.importDf.title" data-i18n="manage.importDf.label" title="Importa pacchetto .df dal portale remoto">📥 Importa .df</button>
         <input type="file" id="importDfInput" accept=".df" style="display:none;">
-        <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info title="Info"><span style="font-size: 20px;">ℹ️</span></a>
+        <a href="#" class="text-decoration-none text-secondary ms-auto" data-df-info data-i18n-attr="title:info.button.info" title="Info"><span style="font-size: 20px;">ℹ️</span></a>
       </div>
 
-      <div class="small text-muted mt-2" id="statusLine">Caricamento...</div>
+      <div class="small text-muted mt-2" id="statusLine" data-i18n="common.loading">Caricamento...</div>
 
       <div class="d-flex flex-wrap gap-2 align-items-center mt-2" id="filterBar">
         <select id="filterCantiere" class="form-select form-select-sm" style="min-width:160px; max-width:220px;">
-          <option value="">Tutti i cantieri</option>
+          <option value="" data-i18n="manage.filter.allCantieri">Tutti i cantieri</option>
         </select>
         <select id="filterTipo" class="form-select form-select-sm" style="min-width:160px; max-width:220px;">
-          <option value="">Tutti i tipi</option>
+          <option value="" data-i18n="manage.filter.allTipi">Tutti i tipi</option>
         </select>
         <select id="filterOperatore" class="form-select form-select-sm" style="min-width:160px; max-width:220px;">
-          <option value="">Tutti gli operatori</option>
+          <option value="" data-i18n="manage.filter.allOperatori">Tutti gli operatori</option>
         </select>
-        <input type="date" id="filterDateFrom" class="form-control form-control-sm" style="width:145px;" title="Data inserimento da">
-        <input type="date" id="filterDateTo"   class="form-control form-control-sm" style="width:145px;" title="Data inserimento a">
-        <button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm d-none">✕ Azzera filtri</button>
+        <input type="date" id="filterDateFrom" class="form-control form-control-sm" style="width:145px;" data-i18n-attr="title:manage.filter.dateFromTitle" title="Data inserimento da">
+        <input type="date" id="filterDateTo"   class="form-control form-control-sm" style="width:145px;" data-i18n-attr="title:manage.filter.dateToTitle" title="Data inserimento a">
+        <button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm d-none" data-i18n="manage.filter.reset">✕ Azzera filtri</button>
       </div>
     </div>
   </div>
 
   <div class="container-fluid my-3">
-    <h1 class="h4 mb-3">Archivio Commissioning</h1>
+    <h1 class="h4 mb-3" data-i18n="manage.title">Archivio Commissioning</h1>
 
     <div class="table-responsive">
       <table class="table table-bordered table-hover bg-white" id="recordsTable">
         <thead class="table-light">
           <tr>
-            <th data-sort="ID" style="width:70px; cursor:pointer; user-select:none;">ID <span class="sort-icon">↓</span></th>
-            <th data-sort="Cantiere" style="cursor:pointer; user-select:none;">Cantiere <span class="sort-icon"></span></th>
-            <th data-sort="Nome Barca" style="cursor:pointer; user-select:none;">Nome Barca <span class="sort-icon"></span></th>
-            <th data-sort="Numero Scafo" style="cursor:pointer; user-select:none;">Numero Scafo <span class="sort-icon"></span></th>
-            <th>Matricola</th>
-            <th data-sort="Tipo" style="cursor:pointer; user-select:none;">Tipo <span class="sort-icon"></span></th>
-            <th data-sort="Operatore" style="cursor:pointer; user-select:none;">Operatore <span class="sort-icon"></span></th>
-            <th data-sort="Data e Ora Inserimento" style="width:180px; cursor:pointer; user-select:none;">Data Inserimento <span class="sort-icon"></span></th>
-            <th style="width: 170px;">Azioni</th>
+            <th data-sort="ID" style="width:70px; cursor:pointer; user-select:none;"><span data-i18n="manage.col.id">ID</span> <span class="sort-icon">↓</span></th>
+            <th data-sort="Cantiere" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.cantiere">Cantiere</span> <span class="sort-icon"></span></th>
+            <th data-sort="Nome Barca" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.nomeBarca">Nome Barca</span> <span class="sort-icon"></span></th>
+            <th data-sort="Numero Scafo" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.numeroScafo">Numero Scafo</span> <span class="sort-icon"></span></th>
+            <th data-i18n="manage.col.matricola">Matricola</th>
+            <th data-sort="Tipo" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.tipo">Tipo</span> <span class="sort-icon"></span></th>
+            <th data-sort="Operatore" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.operatore">Operatore</span> <span class="sort-icon"></span></th>
+            <th data-sort="Data e Ora Inserimento" style="width:180px; cursor:pointer; user-select:none;"><span data-i18n="manage.col.dataInserimento">Data Inserimento</span> <span class="sort-icon"></span></th>
+            <th style="width: 170px;" data-i18n="manage.col.azioni">Azioni</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -87,7 +87,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
       <div class="small text-muted" id="pageInfo"></div>
 
-      <nav aria-label="Paginazione">
+      <nav data-i18n-attr="aria-label:manage.paginationAria" aria-label="Paginazione">
         <ul class="pagination mb-0" id="pagination"></ul>
       </nav>
     </div>
@@ -98,50 +98,50 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Modifica commissioning</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+          <h5 class="modal-title" data-i18n="edit.title">Modifica commissioning</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-attr="aria-label:common.close" aria-label="Chiudi"></button>
         </div>
 
         <div class="modal-body">
           <form id="editForm">
             <div class="row g-3">
               <div class="col-md-2">
-                <label class="form-label">ID</label>
+                <label class="form-label" data-i18n="edit.label.id">ID</label>
                 <input id="editID" class="form-control" readonly>
               </div>
 
               <div class="col-md-4">
-                <label class="form-label">Data inserimento</label>
+                <label class="form-label" data-i18n="edit.label.dataInserimento">Data inserimento</label>
                 <input id="editData" class="form-control" readonly>
               </div>
 
               <div class="col-md-6">
-                <label class="form-label">Cantiere</label>
+                <label class="form-label" data-i18n="edit.label.cantiere">Cantiere</label>
                 <input id="editCantiere" class="form-control">
               </div>
 
               <div class="col-md-6">
-                <label class="form-label">Nome barca</label>
+                <label class="form-label" data-i18n="edit.label.nomeBarca">Nome barca</label>
                 <input id="editNomeBarca" class="form-control">
               </div>
 
               <div class="col-md-3">
-                <label class="form-label">Numero scafo</label>
+                <label class="form-label" data-i18n="edit.label.numeroScafo">Numero scafo</label>
                 <input id="editNumeroScafo" class="form-control">
               </div>
 
               <div class="col-md-3">
-                <label class="form-label">Matricola</label>
+                <label class="form-label" data-i18n="edit.label.matricola">Matricola</label>
                 <input id="editMatricola" class="form-control">
               </div>
 
               <div class="col-md-4">
-                <label class="form-label">Tipo</label>
+                <label class="form-label" data-i18n="edit.label.tipo">Tipo</label>
                 <input id="editTipo" class="form-control">
               </div>
 
               <div class="col-md-8">
-                <label class="form-label">Operatore</label>
+                <label class="form-label" data-i18n="edit.label.operatore">Operatore</label>
                 <input id="editOperatore" class="form-control">
               </div>
             </div>
@@ -149,7 +149,7 @@
           <div class="accordion mt-3" id="auditAccordion">
             <div class="accordion-item">
               <h2 class="accordion-header" id="auditHeading">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#auditCollapse" aria-expanded="false" aria-controls="auditCollapse">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#auditCollapse" aria-expanded="false" aria-controls="auditCollapse" data-i18n="edit.audit.title">
                   Info (audit)
                 </button>
               </h2>
@@ -157,19 +157,19 @@
                 <div class="accordion-body">
                   <div class="row g-3">
                     <div class="col-md-3">
-                      <label class="form-label">Creato da</label>
+                      <label class="form-label" data-i18n="edit.audit.createdBy">Creato da</label>
                       <input id="editCreatoDa" class="form-control" readonly>
                     </div>
                     <div class="col-md-3">
-                      <label class="form-label">Creato il</label>
+                      <label class="form-label" data-i18n="edit.audit.createdOn">Creato il</label>
                       <input id="editCreatoIl" class="form-control" readonly>
                     </div>
                     <div class="col-md-3">
-                      <label class="form-label">Modificato da</label>
+                      <label class="form-label" data-i18n="edit.audit.modifiedBy">Modificato da</label>
                       <input id="editModificatoDa" class="form-control" readonly>
                     </div>
                     <div class="col-md-3">
-                      <label class="form-label">Modificato il</label>
+                      <label class="form-label" data-i18n="edit.audit.modifiedOn">Modificato il</label>
                       <input id="editModificatoIl" class="form-control" readonly>
                     </div>
                   </div>
@@ -180,20 +180,28 @@
 
 
           <div class="alert alert-danger d-none mt-3" id="editError"></div>
-          <div class="alert alert-success d-none mt-3" id="editSuccess">Salvato!</div>
+          <div class="alert alert-success d-none mt-3" id="editSuccess" data-i18n="edit.saved">Salvato!</div>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
-          <button type="button" class="btn btn-primary" id="saveEditBtn">Salva</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Annulla</button>
+          <button type="button" class="btn btn-primary" id="saveEditBtn" data-i18n="common.save">Salva</button>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="i18n.js"></script>
 
   <script>
+    function dfT(key, params) {
+      if (window.DF_I18N && typeof window.DF_I18N.t === 'function') {
+        return window.DF_I18N.t(key, params);
+      }
+      return key;
+    }
+
     let allRecords = [];
     let filteredRecords = [];
 
@@ -317,6 +325,9 @@
 
     function renderTable(records) {
       const tableBody = document.querySelector('#recordsTable tbody');
+      const lblView = escapeHtml(dfT('manage.action.view'));
+      const lblEdit = escapeHtml(dfT('manage.action.edit'));
+      const lblDelete = escapeHtml(dfT('manage.action.delete'));
       tableBody.innerHTML = records.map(record => `
         <tr>
           <td>${escapeHtml(record.ID)}</td>
@@ -329,9 +340,9 @@
           <td>${escapeHtml(record['Data e Ora Inserimento'])}</td>
           <td>
             <div class="d-flex gap-2 flex-wrap">
-              <button class="btn btn-outline-secondary btn-sm" data-action="folder" data-id="${escapeHtml(record.ID)}">Visualizza cartella</button>
-              <button class="btn btn-warning btn-sm" data-action="edit" data-id="${escapeHtml(record.ID)}">Modifica</button>
-              <button class="btn btn-danger btn-sm" data-action="delete" data-id="${escapeHtml(record.ID)}">Elimina</button>
+              <button class="btn btn-outline-secondary btn-sm" data-action="folder" data-id="${escapeHtml(record.ID)}">${lblView}</button>
+              <button class="btn btn-warning btn-sm" data-action="edit" data-id="${escapeHtml(record.ID)}">${lblEdit}</button>
+              <button class="btn btn-danger btn-sm" data-action="delete" data-id="${escapeHtml(record.ID)}">${lblDelete}</button>
             </div>
           </td>
         </tr>
@@ -407,23 +418,23 @@
 
       const pageInfo = document.getElementById('pageInfo');
       pageInfo.textContent = total === 0
-        ? 'Nessun record'
-        : `Mostrando ${start + 1}–${end} di ${total}`;
+        ? dfT('manage.empty')
+        : dfT('manage.showing', { start: start + 1, end, total });
 
-      setStatus(`Totale record: ${allRecords.length} • Filtrati: ${filteredRecords.length}`);
+      setStatus(dfT('manage.totalFiltered', { all: allRecords.length, filtered: filteredRecords.length }));
     }
 
     async function loadRecords() {
-      setStatus('Caricamento record...');
+      setStatus(dfT('manage.loading'));
       try {
         const response = await fetch('/records');
         if (!response.ok) {
-          setStatus(`Errore caricamento record (HTTP ${response.status})`);
+          setStatus(dfT('manage.error.load', { status: response.status }));
           return;
         }
         allRecords = await response.json();
       } catch (e) {
-        setStatus('Errore di rete durante il caricamento dei record.');
+        setStatus(dfT('manage.error.network'));
         return;
       }
 
@@ -431,16 +442,16 @@
       applyFilter(true);
     }
 
-    
+
     async function openFolder(id) {
       try {
         const res = await fetch(`/records/${id}/open-folder`, { method: 'POST' });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          alert(err.error || 'Impossibile aprire la cartella.');
+          alert(err.error || dfT('manage.error.folder'));
         }
       } catch (e) {
-        alert('Errore di rete durante apertura cartella.');
+        alert(dfT('manage.error.folderNet'));
       }
     }
 
@@ -511,7 +522,7 @@ function openEdit(id) {
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || 'Errore durante il salvataggio');
+          throw new Error(data.error || dfT('edit.error.save'));
         }
 
         ok.classList.remove('d-none');
@@ -535,17 +546,22 @@ function openEdit(id) {
     }
 
     async function deleteRecord(id) {
-      if (!confirm('Sei sicuro di voler eliminare questo record?')) return;
+      const ok = await window.dfConfirm({
+        titleKey: 'delete.title',
+        messageKey: 'delete.message',
+        danger: true,
+      });
+      if (!ok) return;
 
       try {
         const res = await fetch(`/records/${id}`, { method: 'DELETE' });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          alert(data.error || `Errore durante eliminazione (HTTP ${res.status})`);
+          alert(data.error || dfT('manage.error.delete', { status: res.status }));
           return;
         }
       } catch (e) {
-        alert('Errore di rete durante eliminazione.');
+        alert(dfT('manage.error.deleteNet'));
         return;
       }
 
@@ -583,7 +599,7 @@ function openEdit(id) {
     // ── Export CSV ────────────────────────────────────────────────────────────
     function exportCsv() {
       const records = filteredRecords;
-      if (!records.length) { alert('Nessun record da esportare.'); return; }
+      if (!records.length) { alert(dfT('manage.export.empty')); return; }
 
       const cols = ['ID','Cantiere','Nome Barca','Numero Scafo','Matricola','Tipo','Operatore','Data e Ora Inserimento'];
       const escape = v => `"${String(v ?? '').replaceAll('"', '""')}"`;
@@ -603,29 +619,39 @@ function openEdit(id) {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`✓ CSV esportato: <strong>${filename}</strong>`, 'success');
+      showToast(dfT('manage.export.csvOk', { filename }), 'success');
     }
 
     // ── Export PDF ────────────────────────────────────────────────────────────
     function exportPdf() {
       const records = filteredRecords;
-      if (!records.length) { alert('Nessun record da esportare.'); return; }
+      if (!records.length) { alert(dfT('manage.export.empty')); return; }
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const now = new Date().toLocaleString('it-IT');
 
       doc.setFontSize(14);
-      doc.text('Archivio Commissioning', 14, 14);
+      doc.text(dfT('manage.export.pdfTitle'), 14, 14);
       doc.setFontSize(9);
       doc.setTextColor(100);
       const q = document.getElementById('searchInput').value.trim();
-      doc.text(`Esportato il ${now}${q ? '  |  Filtro: "' + q + '"' : ''}  |  ${records.length} record`, 14, 21);
+      const filterPart = q ? dfT('manage.export.pdfFilterPart', { q }) : '';
+      doc.text(dfT('manage.export.pdfMeta', { now, filter: filterPart, count: records.length }), 14, 21);
       doc.setTextColor(0);
 
       doc.autoTable({
         startY: 26,
-        head: [['ID','Cantiere','Nome Barca','N. Scafo','Matricola','Tipo','Operatore','Data Inserimento']],
+        head: [[
+          dfT('manage.col.id'),
+          dfT('manage.col.cantiere'),
+          dfT('manage.col.nomeBarca'),
+          dfT('manage.export.pdfCol.numeroScafoShort'),
+          dfT('manage.col.matricola'),
+          dfT('manage.col.tipo'),
+          dfT('manage.col.operatore'),
+          dfT('manage.col.dataInserimento'),
+        ]],
         body: records.map(r => [
           r.ID ?? '',
           r.Cantiere ?? '',
@@ -643,7 +669,7 @@ function openEdit(id) {
 
       const pdfFilename = `commissioning_${new Date().toISOString().slice(0,10)}.pdf`;
       doc.save(pdfFilename);
-      showToast(`✓ PDF esportato: <strong>${pdfFilename}</strong>`, 'success');
+      showToast(dfT('manage.export.pdfOk', { filename: pdfFilename }), 'success');
     }
 
     document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
@@ -675,11 +701,12 @@ function openEdit(id) {
         document.body.appendChild(container);
       }
       const id = 'toast_' + Date.now();
+      const closeLabel = dfT('common.close');
       container.insertAdjacentHTML('beforeend', `
         <div id="${id}" class="toast align-items-center text-bg-${type} border-0 show mb-2" role="alert" aria-live="assertive">
           <div class="d-flex">
             <div class="toast-body">${html}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Chiudi"></button>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="${escapeHtml(closeLabel)}"></button>
           </div>
         </div>`);
       const el = document.getElementById(id);
@@ -699,7 +726,8 @@ function openEdit(id) {
 
       const btn = document.getElementById('importDfBtn');
       btn.disabled = true;
-      btn.textContent = 'Importazione…';
+      btn.removeAttribute('data-i18n');
+      btn.textContent = dfT('manage.importDf.loading');
 
       const formData = new FormData();
       formData.append('dfFile', file);
@@ -707,25 +735,27 @@ function openEdit(id) {
       try {
         const res = await fetch('/import-df', { method: 'POST', body: formData });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Errore importazione');
+        if (!res.ok) throw new Error(data.error || dfT('manage.import.error'));
 
         const r = data.newRecord;
         const label = `${r.Cantiere} — ${r['Nome Barca']} (${r['Numero Scafo']})`;
         const notes = [];
-        if (data.filesImported > 0) notes.push(`${data.filesImported} file allegati`);
+        if (data.filesImported > 0) notes.push(dfT('manage.import.filesNote', { n: data.filesImported }));
         if (data.normalization) {
           for (const [k, v] of Object.entries(data.normalization)) {
             if (v) notes.push(`${k}: "${v.from}" → "${v.to}"`);
           }
         }
 
-        showToast(`Importato: <strong>${escapeHtml(label)}</strong>${notes.length ? '<br><small>' + notes.map(escapeHtml).join(' | ') + '</small>' : ''}`, 'success');
+        const notesHtml = notes.length ? '<br><small>' + notes.map(escapeHtml).join(' | ') + '</small>' : '';
+        showToast(dfT('manage.import.ok', { label: escapeHtml(label), notes: notesHtml }), 'success');
         loadRecords();
       } catch (err) {
-        showToast('Errore: ' + escapeHtml(err.message), 'danger');
+        showToast(dfT('manage.import.errorPrefix') + escapeHtml(err.message), 'danger');
       } finally {
         btn.disabled = false;
-        btn.textContent = '📥 Importa .df';
+        btn.setAttribute('data-i18n', 'manage.importDf.label');
+        btn.textContent = dfT('manage.importDf.label');
       }
     });
 
@@ -770,6 +800,13 @@ function openEdit(id) {
       applyFilter(true);
     });
 
+    // Re-render dinamico al cambio lingua
+    window.addEventListener('df:langchange', () => {
+      if (allRecords.length || filteredRecords.length) {
+        render();
+      }
+    });
+
     // Avvio
     loadRecords();
   </script>
@@ -780,29 +817,29 @@ function openEdit(id) {
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Info</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+        <h5 class="modal-title" data-i18n="info.title.info">Info</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-attr="aria-label:common.close" aria-label="Chiudi"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-2">
+        <p class="mb-2" data-i18n-html="info.description">
           Il portale consente di registrare i <strong>commissioning</strong> e archiviare i relativi allegati, salvando i dati in un file Excel e organizzando automaticamente le cartelle.
         </p>
         <p class="mb-3">
-          <small class="text-muted">Versione <span id="dfAppVersion">v?</span></small>
+          <small class="text-muted"><span data-i18n="info.version">Versione</span> <span id="dfAppVersion">v?</span></small>
         </p>
 
         <div class="border-top pt-3">
-          <h6 class="mb-2">Destinazione caricamenti</h6>
+          <h6 class="mb-2" data-i18n="info.dest.title">Destinazione caricamenti</h6>
           <div class="input-group">
-            <input id="dfUploadsRootDir" class="form-control" placeholder="Es. \\Server\Share\Cartella" />
-            <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button">Scegli…</button>
-            <button id="dfSaveDirBtn" class="btn btn-primary" type="button">Salva</button>
+            <input id="dfUploadsRootDir" class="form-control" data-i18n-attr="placeholder:info.dest.placeholder" placeholder="Es. \\Server\Share\Cartella" />
+            <button id="dfChooseDirBtn" class="btn btn-outline-secondary d-none" type="button" data-i18n="info.dest.choose">Scegli…</button>
+            <button id="dfSaveDirBtn" class="btn btn-primary" type="button" data-i18n="common.save">Salva</button>
           </div>
-          <div class="form-text">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
+          <div class="form-text" data-i18n="info.dest.help">Cartella base dove vengono create le sottocartelle dei commissioning.</div>
         </div>
 
         <div class="mt-4 text-center">
-          <small class="text-muted">Made with ❤️ by DF</small>
+          <small class="text-muted" data-i18n="info.madeWith">Made with ❤️ by DF</small>
         </div>
       </div>
     </div>
