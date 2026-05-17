@@ -4,6 +4,7 @@
       "dist/server.exe": "server.exe",
       "dist/chart.min.js": "chart.min.js",
       "dist/dashboard.html": "dashboard.html",
+      "dist/i18n.js": "i18n.js",
       "dist/import_df.js": "import_df.js",
       "dist/index.html": "index.html",
       "dist/jspdf.plugin.autotable.min.js": "jspdf.plugin.autotable.min.js",

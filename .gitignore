@@ -28,3 +28,4 @@ start_server.bat
 package-lock.json
 src-tauri/Cargo.toml
 /src-tauri
+/src-tauri
