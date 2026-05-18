@@ -813,9 +813,20 @@ function openEdit(id) {
       }
     });
 
-    document.getElementById('openRootBtn').addEventListener('click', async () => {
-      bootstrap.Modal.getInstance(document.getElementById('historicalNoticeModal')).hide();
-      await fetch('/open-root', { method: 'POST' }).catch(() => {});
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('openRootBtn').addEventListener('click', async () => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('historicalNoticeModal'));
+        if (modal) modal.hide();
+        try {
+          const res = await fetch('/open-root', { method: 'POST' });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            alert(data.error || dfT('manage.error.folder'));
+          }
+        } catch {
+          alert(dfT('manage.error.folderNet'));
+        }
+      });
     });
 
     // Avvio
