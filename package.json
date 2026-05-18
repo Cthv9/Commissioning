@@ -1,6 +1,6 @@
 {
   "name": "portale-commissioning",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Portale Commissioning",
   "scripts": {
     "dev:server": "node server.js",
