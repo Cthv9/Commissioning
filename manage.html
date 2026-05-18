@@ -449,13 +449,16 @@
     async function openFolder(id) {
       try {
         const res = await fetch(`/records/${id}/open-folder`, { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          alert(err.error || dfT('manage.error.folder'));
-        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { alert(data.error || dfT('manage.error.folder')); return; }
+        if (data.folderExists === false) { showHistoricalNotice(); }
       } catch (e) {
         alert(dfT('manage.error.folderNet'));
       }
+    }
+
+    function showHistoricalNotice() {
+      new bootstrap.Modal(document.getElementById('historicalNoticeModal')).show();
     }
 
 function openEdit(id) {
@@ -810,10 +813,34 @@ function openEdit(id) {
       }
     });
 
+    document.getElementById('openRootBtn').addEventListener('click', async () => {
+      bootstrap.Modal.getInstance(document.getElementById('historicalNoticeModal')).hide();
+      await fetch('/open-root', { method: 'POST' }).catch(() => {});
+    });
+
     // Avvio
     loadRecords();
   </script>
   <script src="ui-common.js"></script>
+
+<!-- Notice record storico -->
+<div class="modal fade" id="historicalNoticeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" data-i18n="manage.historicalNotice.title">Record da archivio storico</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p data-i18n="manage.historicalNotice.body">Questo record è stato generato automaticamente da un archivio storico e non tramite il portale. I file relativi non si trovano in una cartella dedicata. Per trovarli usa la funzione Cerca di Windows nella cartella radice che si aprirà.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Annulla</button>
+        <button type="button" class="btn btn-primary" id="openRootBtn" data-i18n="manage.historicalNotice.openRoot">Apri cartella radice</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Info / Impostazioni -->
 <div class="modal fade" id="dfInfoModal" tabindex="-1" aria-hidden="true">

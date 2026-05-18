@@ -751,20 +751,19 @@ app.post('/records/:id/open-folder', (req, res) => {
     if (fs.existsSync(pOld)) { found = pOld; break; }
   }
 
-  // Se non esiste ancora (record senza allegati), crea e apri la cartella nella root attuale
-  const expected = path.join(getUploadsRootDir(), cantiereFolder, categoriaFolder, recordFolderName);
-  const folderToOpen = found || expected;
-
-  try {
-    ensureDir(folderToOpen);
-    ensureStandardSubfolders(folderToOpen);
-  } catch (e) {
-    // non bloccare l'apertura, ma segnala
+  if (!found) {
+    return res.json({ ok: false, folderExists: false, root: getUploadsRootDir() });
   }
 
-  openInExplorer(folderToOpen)
-    .then(() => res.json({ ok: true, path: folderToOpen }))
+  openInExplorer(found)
+    .then(() => res.json({ ok: true, path: found }))
     .catch(err => res.status(500).json({ error: 'Errore durante l\'apertura della cartella', details: String(err.message || err) }));
+});
+
+app.post('/open-root', (req, res) => {
+  openInExplorer(getUploadsRootDir())
+    .then(() => res.json({ ok: true }))
+    .catch(err => res.status(500).json({ error: 'Errore apertura cartella radice', details: String(err.message || err) }));
 });
 
 /**
