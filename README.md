@@ -9,8 +9,8 @@ App desktop Windows per la registrazione e gestione dei record di commissioning 
 - Archivio ricercabile con paginazione, modifica ed eliminazione record
 - Filtri dinamici per cantiere, tipo e operatore + ordinamento per colonna nell'archivio
 - Dashboard con KPI (totale record, questo mese, cantiere top) e grafici statistici (Chart.js)
-- Portale slave (sola lettura) per tecnici: compila il modulo e genera un pacchetto `.df` da importare
-- PWA installabile da browser per il portale slave (`docs/`): funziona offline e si installa come app nativa
+- Portale remoto per tecnici: compila il modulo e genera un pacchetto `.df` da importare
+- PWA installabile da browser per il portale remoto (`docs/`): funziona offline e si installa come app nativa
 - Backup automatico in formato JSON + copie rotanti del file Excel
 - Sincronizzazione con file Excel su share di rete configurabile
 - Selezione cartella di destinazione upload tramite dialog nativa
@@ -60,7 +60,7 @@ npm run tauri:build
 
 L'installer NSIS viene generato in:
 ```
-src-tauri/target/release/bundle/nsis/Portale Commissioning_2.0.0_x64-setup.exe
+src-tauri/target/release/bundle/nsis/Portale Commissioning_3.0.0_x64-setup.exe
 ```
 
 ## Struttura del progetto
@@ -76,7 +76,7 @@ src-tauri/target/release/bundle/nsis/Portale Commissioning_2.0.0_x64-setup.exe
 ├── scripts/
 │   ├── build-sidecar.js    # Copia frontend + rinomina exe per Tauri
 │   └── tauri-wrapper.js    # Wrapper per CLI Tauri
-├── docs/                   # PWA portale slave (pubblicabile su GitHub Pages o server web)
+├── docs/                   # PWA portale remoto (pubblicabile su GitHub Pages o server web)
 │   ├── index.html          # App web installabile (service worker + manifest)
 │   ├── manifest.json       # Manifest PWA
 │   ├── sw.js               # Service worker (cache offline)
@@ -86,7 +86,7 @@ src-tauri/target/release/bundle/nsis/Portale Commissioning_2.0.0_x64-setup.exe
 ├── nuovo.html              # Pagina inserimento nuovo record
 ├── manage.html             # Pagina archivio/gestione (filtri dinamici, ordinamento colonne)
 ├── dashboard.html          # Dashboard con KPI e grafici (Chart.js)
-├── slave.html              # Portale remoto sola lettura: genera pacchetti .df
+├── slave.html              # Portale remoto: genera pacchetti .df
 ├── script.js               # Logica upload con progress
 ├── ui-common.js            # Componenti UI condivisi (modal info, impostazioni)
 ├── chart.min.js            # Bundle Chart.js (locale)
