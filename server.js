@@ -12,7 +12,6 @@ const AdmZip = require('adm-zip');
  * Puoi sovrascriverlo con variabile ambiente PORTALE_ROOT_DIR se necessario.
  */
 const excelRootDir = process.env.PORTALE_ROOT_DIR || '';
-const excelPath = path.join(excelRootDir || '.', 'Barche_Commissionate.xlsx');
 
 // Upload root di default: può essere diverso dall'Excel (configurabile)
 const defaultUploadsRootDir = process.env.PORTALE_UPLOADS_DIR || excelRootDir;
@@ -85,6 +84,10 @@ function saveSettings(partial) {
 function getUploadsRootDir() {
   const s = loadSettings();
   return s.uploadsRootDir || defaultUploadsRootDir;
+}
+
+function getExcelPath() {
+  return path.join(getUploadsRootDir(), 'Barche_Commissionate.xlsx');
 }
 
 function getUploadsRootsToTry() {
@@ -227,6 +230,7 @@ function readSnapshot() {
 }
 
 function readExcel() {
+  const excelPath = getExcelPath();
   // Se l'Excel manca, ripiega sul backup snapshot (così la UI rimane funzionante).
   if (!fs.existsSync(excelPath)) {
     return readSnapshot();
@@ -247,10 +251,11 @@ function readExcel() {
 }
 
 function writeExcel(baseRecords) {
+  const excelPath = getExcelPath();
   const workbook = xlsx.utils.book_new();
   const sheet = xlsx.utils.json_to_sheet(baseRecords, { header: BASE_HEADERS });
   xlsx.utils.book_append_sheet(workbook, sheet, 'Matrice');
-  ensureDir(excelRootDir);
+  ensureDir(getUploadsRootDir());
   xlsx.writeFile(workbook, excelPath);
 }
 
@@ -290,6 +295,7 @@ function persistBackup(action, recordOrInfo, fullRecords) {
 
   // Copia Excel per sicurezza (se esiste)
   try {
+    const excelPath = getExcelPath();
     if (fs.existsSync(excelPath)) {
       ensureDir(backupFiles.excelCopiesDir);
       const stamp = ts.replace(/[:.]/g, '-');
@@ -499,7 +505,7 @@ app.get('/settings', (req, res) => {
   res.json({
     appName: appPkg.name,
     version: appPkg.version,
-    excelRootDir,
+    excelRootDir: getUploadsRootDir(),
     uploadsRootDir: getUploadsRootDir(),
     backupDir,
   });
