@@ -819,12 +819,87 @@ const dfUpload = multer({
   },
 });
 
+app.post('/preview-df', dfUpload.single('dfFile'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Nessun file .df ricevuto.' });
+  const dfPath = req.file.path;
+  try {
+    const zip = new AdmZip(dfPath);
+    const recordEntry = zip.getEntry('record.json');
+    if (!recordEntry) {
+      try { fs.unlinkSync(dfPath); } catch {}
+      return res.status(400).json({ error: 'record.json non trovato nel pacchetto .df' });
+    }
+    let record;
+    try { record = JSON.parse(recordEntry.getData().toString('utf8')); }
+    catch (e) {
+      try { fs.unlinkSync(dfPath); } catch {}
+      return res.status(400).json({ error: 'record.json non è un JSON valido: ' + e.message });
+    }
+
+    const dataWithMeta = readExcel();
+    const baseRecords = dataWithMeta.map(r => { const out = {}; for (const h of BASE_HEADERS) out[h] = r[h] ?? ''; return out; });
+    const existingCantieri = new Set(baseRecords.map(r => r.Cantiere));
+    const existingOperatori = new Set(baseRecords.map(r => r.Operatore));
+    const existingTipi = new Set(baseRecords.map(r => r.Tipo));
+
+    const origC = String(record.Cantiere || '').trim();
+    const origO = String(record.Operatore || '').trim();
+    const origT = String(record.Tipo || '').trim();
+    const normC = normalizeValue(origC, existingCantieri);
+    const normO = normalizeValue(origO, existingOperatori);
+    const normT = normalizeValue(origT, existingTipi);
+
+    const normalization = {
+      cantiere: origC !== normC ? { from: origC, to: normC } : null,
+      operatore: origO !== normO ? { from: origO, to: normO } : null,
+      tipo: origT !== normT ? { from: origT, to: normT } : null,
+    };
+
+    const filesCount = zip.getEntries().filter(e => e.entryName.startsWith('allegati/') && !e.isDirectory).length;
+
+    res.json({
+      tempFile: path.basename(dfPath),
+      recordData: {
+        Cantiere: normC || origC,
+        'Nome Barca': String(record['Nome Barca'] || '').trim(),
+        'Numero Scafo': String(record['Numero Scafo'] || '').trim(),
+        Matricola: String(record.Matricola || '').trim(),
+        Tipo: normT || origT,
+        Operatore: normO || origO,
+        'Data e Ora Inserimento': String(record['Data e Ora Inserimento'] || '').trim(),
+      },
+      normalization,
+      filesCount,
+    });
+  } catch (err) {
+    try { fs.unlinkSync(dfPath); } catch {}
+    res.status(500).json({ error: 'Errore durante la lettura del pacchetto: ' + err.message });
+  }
+});
+
+app.post('/cancel-df-import', express.json(), (req, res) => {
+  const safeName = path.basename(String(req.body?.tempFile || ''));
+  if (safeName) {
+    const tmpPath = path.join(backupDir, 'tmp_df_imports', safeName);
+    try { fs.unlinkSync(tmpPath); } catch {}
+  }
+  res.json({ ok: true });
+});
+
 app.post('/import-df', dfUpload.single('dfFile'), (req, res) => {
-  if (!req.file) {
+  let dfPath;
+
+  if (req.body && req.body.tempFile) {
+    const safeName = path.basename(String(req.body.tempFile));
+    dfPath = path.join(backupDir, 'tmp_df_imports', safeName);
+    if (!fs.existsSync(dfPath)) {
+      return res.status(400).json({ error: "File temporaneo non trovato. Ripetere l'importazione." });
+    }
+  } else if (req.file) {
+    dfPath = req.file.path;
+  } else {
     return res.status(400).json({ error: 'Nessun file .df ricevuto.' });
   }
-
-  const dfPath = req.file.path;
 
   try {
     const zip = new AdmZip(dfPath);
@@ -838,6 +913,11 @@ app.post('/import-df', dfUpload.single('dfFile'), (req, res) => {
       record = JSON.parse(recordEntry.getData().toString('utf8'));
     } catch (e) {
       return res.status(400).json({ error: 'record.json non è un JSON valido: ' + e.message });
+    }
+
+    // Override con valori confermati/corretti dall'utente (flusso preview)
+    if (req.body && req.body.confirmedData) {
+      try { Object.assign(record, JSON.parse(req.body.confirmedData)); } catch {}
     }
 
     // Normalizza i valori rispetto a quelli esistenti

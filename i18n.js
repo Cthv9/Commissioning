@@ -113,6 +113,11 @@
       'manage.import.filesNote': '{n} file allegati',
       'manage.paginationAria': 'Paginazione',
 
+      // ── Modale anteprima importazione .df ─────────────────
+      'manage.importPreview.title': 'Anteprima importazione .df',
+      'manage.importPreview.confirm': '📥 Importa',
+      'manage.importPreview.normalizationWarning': 'Alcuni valori sono stati corretti automaticamente:',
+
       // ── Modale modifica record ─────────────────────────────
       'edit.title': 'Modifica commissioning',
       'edit.label.id': 'ID',
@@ -307,6 +312,11 @@
       'manage.import.ok': 'Imported: <strong>{label}</strong>{notes}',
       'manage.import.filesNote': '{n} attached files',
       'manage.paginationAria': 'Pagination',
+
+      // ── .df import preview modal ───────────────────────────
+      'manage.importPreview.title': '.df import preview',
+      'manage.importPreview.confirm': '📥 Import',
+      'manage.importPreview.normalizationWarning': 'Some values were automatically corrected:',
 
       // ── Edit record modal ──────────────────────────────────
       'edit.title': 'Edit commissioning',
