@@ -114,6 +114,8 @@ fn main() {
                     .title("Portale Commissioning")
                     .inner_size(1280.0, 800.0)
                     .min_inner_size(900.0, 650.0)
+                    .maximized(true)
+                    .drag_and_drop_enabled(false)
                     .visible(false)
                     .build();
 
