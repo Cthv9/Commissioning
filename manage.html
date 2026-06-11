@@ -12,6 +12,22 @@
   
     .modal { z-index: 2000; }
     .modal-backdrop { z-index: 1990; }
+    #dfDropOverlay {
+      position: fixed; inset: 0;
+      background: rgba(13, 110, 253, 0.07);
+      border: 4px dashed #0d6efd;
+      z-index: 9999; display: none;
+      align-items: center; justify-content: center;
+    }
+    #dfDropOverlay.active { display: flex; }
+    #dfDropOverlay .df-drop-inner {
+      background: white; border-radius: 12px;
+      padding: 32px 48px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      font-size: 1.4rem; color: #0d6efd;
+      font-weight: 600; text-align: center;
+      pointer-events: none;
+    }
 </style>
 </head>
 <body>
@@ -786,10 +802,14 @@ function openEdit(id) {
       document.getElementById('importDfInput').click();
     });
 
-    document.getElementById('importDfInput').addEventListener('change', async function () {
+    document.getElementById('importDfInput').addEventListener('change', function () {
       const file = this.files[0];
-      if (!file) return;
       this.value = '';
+      if (file) handleImportFile(file);
+    });
+
+    async function handleImportFile(file) {
+      if (!file) return;
 
       const btn = document.getElementById('importDfBtn');
       btn.disabled = true;
@@ -857,6 +877,38 @@ function openEdit(id) {
         btn.setAttribute('data-i18n', 'manage.importDf.label');
         btn.textContent = dfT('manage.importDf.label');
       }
+    }
+
+    // ── Drag & drop file .df sulla pagina ──────────────────────────────────────
+    let _dfDragCounter = 0;
+    document.addEventListener('dragenter', (e) => {
+      if (!(e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files'))) return;
+      e.preventDefault();
+      _dfDragCounter++;
+      document.getElementById('dfDropOverlay').classList.add('active');
+    });
+    document.addEventListener('dragleave', () => {
+      _dfDragCounter = Math.max(0, _dfDragCounter - 1);
+      if (_dfDragCounter === 0) document.getElementById('dfDropOverlay').classList.remove('active');
+    });
+    document.addEventListener('dragover', (e) => {
+      if (!(e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files'))) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      _dfDragCounter = 0;
+      document.getElementById('dfDropOverlay').classList.remove('active');
+      const files = [];
+      if (e.dataTransfer.items) {
+        for (const item of e.dataTransfer.items) {
+          if (item.kind === 'file') { const f = item.getAsFile(); if (f) files.push(f); }
+        }
+      }
+      if (!files.length) files.push(...Array.from(e.dataTransfer.files));
+      const dfFile = files.find(f => f.name.toLowerCase().endsWith('.df'));
+      if (dfFile) handleImportFile(dfFile);
     });
 
     document.getElementById('confirmImportBtn').addEventListener('click', async () => {
@@ -1020,6 +1072,8 @@ function openEdit(id) {
     </div>
   </div>
 </div>
+
+<div id="dfDropOverlay"><div class="df-drop-inner">📥 Rilascia il file .df per importarlo</div></div>
 
 </body>
 </html>
