@@ -2,8 +2,8 @@
 
 ## Portale Master (`index.html` / `script.js`)
 
-- [ ] **Drag & drop per caricamento file** — Abilitare il trascinamento di file (es. Excel) direttamente nell'area di upload del portale master, in alternativa al classico click sul pulsante di selezione file.
+- [x] **Drag & drop per caricamento file .df** — Abilitato su `manage.html`: overlay a tutto schermo quando si trascina un `.df`, avvia automaticamente il flusso preview → import.
 
 ## Portale Slave remoto (`slave.html`)
 
-- [ ] **Drag & drop per caricamento file** — Abilitare il trascinamento di file nell'interfaccia slave remota, con la stessa esperienza utente del portale master (feedback visivo durante il drag-over, validazione del tipo file).
+- [x] **Drag & drop per caricamento file** — Abilitato: gestisce sia `dataTransfer.items` (Outlook) sia `dataTransfer.files`, con handler `dragenter`/`dragleave` corretti e `dropEffect='copy'`.

@@ -209,6 +209,244 @@ function dfConfirm(opts) {
 
 window.dfConfirm = dfConfirm;
 
+// ── Import .df shared logic ───────────────────────────────────────────────────
+let _dfImportTempFile = null;
+let _dfImportConfirmed = false;
+let _dfImportModalInstance = null;
+let _dfImportOnSuccess = null;
+let _dfImportShowError = null;
+
+function dfInjectImportModal() {
+  if (document.getElementById('importPreviewModal')) return;
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="modal fade" id="importPreviewModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" data-i18n="manage.importPreview.title">Anteprima importazione .df</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+          </div>
+          <div class="modal-body">
+            <div id="importPreviewNorm" class="alert alert-warning d-none mb-3"></div>
+            <form id="importPreviewForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" data-i18n="edit.label.cantiere">Cantiere</label>
+                  <input id="previewCantiere" class="form-control">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" data-i18n="edit.label.nomeBarca">Nome barca</label>
+                  <input id="previewNomeBarca" class="form-control">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label" data-i18n="edit.label.numeroScafo">Numero scafo</label>
+                  <input id="previewNumeroScafo" class="form-control">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label" data-i18n="edit.label.matricola">Matricola</label>
+                  <input id="previewMatricola" class="form-control">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" data-i18n="edit.label.tipo">Tipo</label>
+                  <select id="previewTipo" class="form-select">
+                    <option value="Avviamento">Avviamento</option>
+                    <option value="Commissioning">Commissioning</option>
+                  </select>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label" data-i18n="edit.label.operatore">Operatore</label>
+                  <input id="previewOperatore" class="form-control">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" data-i18n="edit.label.dataInserimento">Data inserimento</label>
+                  <input id="previewData" class="form-control">
+                </div>
+                <div class="col-12">
+                  <p id="importPreviewFilesCount" class="text-muted small mb-0"></p>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Annulla</button>
+            <button type="button" class="btn btn-primary" id="confirmImportBtn" data-i18n="manage.importPreview.confirm">📥 Importa</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap.firstElementChild);
+
+  if (window.DF_I18N) window.DF_I18N.applyTranslations(document.getElementById('importPreviewModal'));
+
+  const modalEl = document.getElementById('importPreviewModal');
+  _dfImportModalInstance = new bootstrap.Modal(modalEl);
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (!_dfImportConfirmed && _dfImportTempFile) {
+      fetch('/cancel-df-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempFile: _dfImportTempFile }),
+      }).catch(() => {});
+      _dfImportTempFile = null;
+    }
+  });
+
+  document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+    const confirmBtn = document.getElementById('confirmImportBtn');
+    confirmBtn.disabled = true;
+
+    const confirmedData = {
+      Cantiere: document.getElementById('previewCantiere').value,
+      'Nome Barca': document.getElementById('previewNomeBarca').value,
+      'Numero Scafo': document.getElementById('previewNumeroScafo').value,
+      Matricola: document.getElementById('previewMatricola').value,
+      Tipo: document.getElementById('previewTipo').value,
+      Operatore: document.getElementById('previewOperatore').value,
+      'Data e Ora Inserimento': document.getElementById('previewData').value,
+    };
+
+    const formData = new FormData();
+    formData.append('tempFile', _dfImportTempFile);
+    formData.append('confirmedData', JSON.stringify(confirmedData));
+
+    try {
+      const res = await fetch('/import-df', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || dfT('manage.import.error'));
+      _dfImportConfirmed = true;
+      _dfImportModalInstance.hide();
+      if (_dfImportOnSuccess) _dfImportOnSuccess(data);
+    } catch (err) {
+      if (_dfImportShowError) _dfImportShowError(dfT('manage.import.errorPrefix') + err.message);
+    } finally {
+      confirmBtn.disabled = false;
+    }
+  });
+}
+
+async function dfHandleImportFile(file, { onSuccess, showError } = {}) {
+  if (!file) return;
+  dfInjectImportModal();
+
+  _dfImportOnSuccess = onSuccess || null;
+  _dfImportShowError = showError || null;
+  _dfImportConfirmed = false;
+
+  const importBtn = document.getElementById('importDfBtn');
+  if (importBtn) {
+    importBtn.disabled = true;
+    importBtn.removeAttribute('data-i18n');
+    importBtn.textContent = dfT('manage.importDf.loading');
+  }
+
+  const formData = new FormData();
+  formData.append('dfFile', file);
+
+  try {
+    const res = await fetch('/preview-df', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || dfT('manage.import.error'));
+
+    _dfImportTempFile = data.tempFile;
+
+    document.getElementById('previewCantiere').value = data.recordData.Cantiere || '';
+    document.getElementById('previewNomeBarca').value = data.recordData['Nome Barca'] || '';
+    document.getElementById('previewNumeroScafo').value = data.recordData['Numero Scafo'] || '';
+    document.getElementById('previewMatricola').value = data.recordData.Matricola || '';
+    document.getElementById('previewOperatore').value = data.recordData.Operatore || '';
+    document.getElementById('previewData').value = data.recordData['Data e Ora Inserimento'] || '';
+
+    const previewTipo = document.getElementById('previewTipo');
+    previewTipo.value = data.recordData.Tipo || '';
+    if (!previewTipo.value) previewTipo.selectedIndex = 0;
+
+    const normDiv = document.getElementById('importPreviewNorm');
+    const normNotes = [];
+    if (data.normalization) {
+      for (const [, v] of Object.entries(data.normalization)) {
+        if (v) normNotes.push(`"${String(v.from).replace(/</g,'&lt;')}" → "${String(v.to).replace(/</g,'&lt;')}"`);
+      }
+    }
+    if (normNotes.length) {
+      normDiv.innerHTML = '⚠️ ' + dfT('manage.importPreview.normalizationWarning') + '<br><small>' + normNotes.join(' | ') + '</small>';
+      normDiv.classList.remove('d-none');
+    } else {
+      normDiv.classList.add('d-none');
+    }
+
+    document.getElementById('importPreviewFilesCount').textContent =
+      data.filesCount > 0 ? dfT('manage.import.filesNote', { n: data.filesCount }) : '';
+
+    _dfImportModalInstance.show();
+  } catch (err) {
+    if (showError) showError(dfT('manage.import.errorPrefix') + err.message);
+  } finally {
+    if (importBtn) {
+      importBtn.disabled = false;
+      importBtn.setAttribute('data-i18n', 'manage.importDf.label');
+      importBtn.textContent = dfT('manage.importDf.label');
+    }
+  }
+}
+
+function dfWirePageDfDrop({ onSuccess, showError } = {}) {
+  if (document.getElementById('dfDropOverlay')) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #dfDropOverlay { position:fixed; inset:0; background:rgba(13,110,253,.07);
+      border:4px dashed #0d6efd; z-index:9999; display:none;
+      align-items:center; justify-content:center; }
+    #dfDropOverlay.active { display:flex; }
+    #dfDropOverlay .df-drop-inner { background:#fff; border-radius:12px;
+      padding:32px 48px; box-shadow:0 8px 32px rgba(0,0,0,.15);
+      font-size:1.4rem; color:#0d6efd; font-weight:600; text-align:center;
+      pointer-events:none; }`;
+  document.head.appendChild(style);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'dfDropOverlay';
+  overlay.innerHTML = '<div class="df-drop-inner">📥 Rilascia il file .df per importarlo</div>';
+  document.body.appendChild(overlay);
+
+  let dragCounter = 0;
+  document.addEventListener('dragenter', (e) => {
+    if (!(e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files'))) return;
+    e.preventDefault();
+    dragCounter++;
+    overlay.classList.add('active');
+  });
+  document.addEventListener('dragleave', () => {
+    dragCounter = Math.max(0, dragCounter - 1);
+    if (dragCounter === 0) overlay.classList.remove('active');
+  });
+  document.addEventListener('dragover', (e) => {
+    if (!(e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files'))) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    overlay.classList.remove('active');
+    const files = [];
+    if (e.dataTransfer.items) {
+      for (const item of e.dataTransfer.items) {
+        if (item.kind === 'file') { const f = item.getAsFile(); if (f) files.push(f); }
+      }
+    }
+    if (!files.length) files.push(...Array.from(e.dataTransfer.files));
+    const dfFile = files.find(f => f.name.toLowerCase().endsWith('.df'));
+    if (dfFile) dfHandleImportFile(dfFile, { onSuccess, showError });
+  });
+}
+
+window.dfHandleImportFile = dfHandleImportFile;
+window.dfWirePageDfDrop = dfWirePageDfDrop;
+
 function dfWireInfoButtons() {
   document.querySelectorAll('[data-df-info]').forEach(btn => {
     btn.addEventListener('click', (e) => {
