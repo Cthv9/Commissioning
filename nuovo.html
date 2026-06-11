@@ -10,6 +10,10 @@
     .form-card { background: white; padding: 20px 28px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,.1); width: min(680px, 100%); margin-top: 12px; }
     @media (max-width: 576px) { body { padding: 8px; } .form-card { padding: 16px; } }
     h1 { text-align: center; color: #495057; margin-bottom: 16px; font-size: 1.4rem; }
+    #dropZone { border: 2px dashed #ced4da; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+    #dropZone:hover, #dropZone.drag-over { border-color: #0d6efd; background: #f0f6ff; }
+    #fileList { font-size: 0.8rem; max-height: 120px; overflow-y: auto; }
+    #fileList li { padding: 2px 0; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -30,7 +34,7 @@
   <div class="form-card">
     <h1 data-i18n="nuovo.heading">Inserisci nuovo commissioning</h1>
 
-    <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="POST">
+    <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="POST" novalidate>
       <div class="row g-2 mb-2">
         <div class="col-7">
           <label for="cantiere" class="form-label mb-1"><span data-i18n="nuovo.label.cantiere">Cantiere Costruttore</span> <span class="text-danger">*</span></label>
@@ -69,8 +73,15 @@
       </div>
 
       <div class="mb-2">
-        <label for="fileInput" class="form-label mb-1"><span data-i18n="nuovo.label.files">Carica file</span> <span class="text-danger">*</span></label>
-        <input type="file" class="form-control form-control-sm" id="fileInput" name="files[]" multiple required>
+        <label class="form-label mb-1"><span data-i18n="nuovo.label.files">Carica file</span> <span class="text-danger">*</span></label>
+        <div id="dropZone" role="button" tabindex="0" aria-label="Zona trascinamento file">
+          <input type="file" id="fileInput" multiple style="display:none;">
+          <div id="dropLabel">
+            <div class="mb-1 small text-muted">Trascina i file qui oppure</div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="browseBtn">Sfoglia…</button>
+          </div>
+          <ul class="list-unstyled mb-0 mt-2 text-start" id="fileList"></ul>
+        </div>
       </div>
 
       <div class="progress mb-2" style="height:18px;">
