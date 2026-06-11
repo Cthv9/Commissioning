@@ -12,22 +12,6 @@
   
     .modal { z-index: 2000; }
     .modal-backdrop { z-index: 1990; }
-    #dfDropOverlay {
-      position: fixed; inset: 0;
-      background: rgba(13, 110, 253, 0.07);
-      border: 4px dashed #0d6efd;
-      z-index: 9999; display: none;
-      align-items: center; justify-content: center;
-    }
-    #dfDropOverlay.active { display: flex; }
-    #dfDropOverlay .df-drop-inner {
-      background: white; border-radius: 12px;
-      padding: 32px 48px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-      font-size: 1.4rem; color: #0d6efd;
-      font-weight: 600; text-align: center;
-      pointer-events: none;
-    }
 </style>
 </head>
 <body>
@@ -205,63 +189,6 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Annulla</button>
           <button type="button" class="btn btn-primary" id="saveEditBtn" data-i18n="common.save">Salva</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal anteprima importazione .df -->
-  <div class="modal fade" id="importPreviewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" data-i18n="manage.importPreview.title">Anteprima importazione .df</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
-        </div>
-        <div class="modal-body">
-          <div id="importPreviewNorm" class="alert alert-warning d-none mb-3"></div>
-          <form id="importPreviewForm">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label" data-i18n="edit.label.cantiere">Cantiere</label>
-                <input id="previewCantiere" class="form-control">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" data-i18n="edit.label.nomeBarca">Nome barca</label>
-                <input id="previewNomeBarca" class="form-control">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label" data-i18n="edit.label.numeroScafo">Numero scafo</label>
-                <input id="previewNumeroScafo" class="form-control">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label" data-i18n="edit.label.matricola">Matricola</label>
-                <input id="previewMatricola" class="form-control">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" data-i18n="edit.label.tipo">Tipo</label>
-                <select id="previewTipo" class="form-select">
-                  <option value="Avviamento">Avviamento</option>
-                  <option value="Commissioning">Commissioning</option>
-                </select>
-              </div>
-              <div class="col-md-8">
-                <label class="form-label" data-i18n="edit.label.operatore">Operatore</label>
-                <input id="previewOperatore" class="form-control">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" data-i18n="edit.label.dataInserimento">Data inserimento</label>
-                <input id="previewData" class="form-control">
-              </div>
-              <div class="col-12">
-                <p id="importPreviewFilesCount" class="text-muted small mb-0"></p>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Annulla</button>
-          <button type="button" class="btn btn-primary" id="confirmImportBtn" data-i18n="manage.importPreview.confirm">📥 Importa</button>
         </div>
       </div>
     </div>
@@ -794,9 +721,18 @@ function openEdit(id) {
     }
 
     // ── Importa .df ────────────────────────────────────────────────────────────
-    let _importTempFile = null;
-    let _importConfirmed = false;
-    let importPreviewModalInstance = null;
+    const _manageImportCallbacks = {
+      onSuccess(data) {
+        const r = data.newRecord;
+        const label = `${r.Cantiere} — ${r['Nome Barca']} (${r['Numero Scafo']})`;
+        const notesHtml = data.filesImported > 0
+          ? '<br><small>' + escapeHtml(dfT('manage.import.filesNote', { n: data.filesImported })) + '</small>'
+          : '';
+        showToast(dfT('manage.import.ok', { label: escapeHtml(label), notes: notesHtml }), 'success');
+        loadRecords();
+      },
+      showError(msg) { showToast(msg, 'danger'); },
+    };
 
     document.getElementById('importDfBtn').addEventListener('click', () => {
       document.getElementById('importDfInput').click();
@@ -805,151 +741,10 @@ function openEdit(id) {
     document.getElementById('importDfInput').addEventListener('change', function () {
       const file = this.files[0];
       this.value = '';
-      if (file) handleImportFile(file);
+      if (file) dfHandleImportFile(file, _manageImportCallbacks);
     });
 
-    async function handleImportFile(file) {
-      if (!file) return;
-
-      const btn = document.getElementById('importDfBtn');
-      btn.disabled = true;
-      btn.removeAttribute('data-i18n');
-      btn.textContent = dfT('manage.importDf.loading');
-
-      const formData = new FormData();
-      formData.append('dfFile', file);
-
-      try {
-        const res = await fetch('/preview-df', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || dfT('manage.import.error'));
-
-        _importTempFile = data.tempFile;
-        _importConfirmed = false;
-
-        document.getElementById('previewCantiere').value = data.recordData.Cantiere || '';
-        document.getElementById('previewNomeBarca').value = data.recordData['Nome Barca'] || '';
-        document.getElementById('previewNumeroScafo').value = data.recordData['Numero Scafo'] || '';
-        document.getElementById('previewMatricola').value = data.recordData.Matricola || '';
-        document.getElementById('previewOperatore').value = data.recordData.Operatore || '';
-        document.getElementById('previewData').value = data.recordData['Data e Ora Inserimento'] || '';
-
-        const previewTipo = document.getElementById('previewTipo');
-        previewTipo.value = data.recordData.Tipo || '';
-        if (!previewTipo.value) previewTipo.selectedIndex = 0;
-
-        const normDiv = document.getElementById('importPreviewNorm');
-        const normNotes = [];
-        if (data.normalization) {
-          for (const [, v] of Object.entries(data.normalization)) {
-            if (v) normNotes.push(`"${escapeHtml(v.from)}" → "${escapeHtml(v.to)}"`);
-          }
-        }
-        if (normNotes.length) {
-          normDiv.innerHTML = '⚠️ ' + dfT('manage.importPreview.normalizationWarning') + '<br><small>' + normNotes.join(' | ') + '</small>';
-          normDiv.classList.remove('d-none');
-        } else {
-          normDiv.classList.add('d-none');
-        }
-
-        document.getElementById('importPreviewFilesCount').textContent =
-          data.filesCount > 0 ? dfT('manage.import.filesNote', { n: data.filesCount }) : '';
-
-        if (!importPreviewModalInstance) {
-          const modalEl = document.getElementById('importPreviewModal');
-          importPreviewModalInstance = new bootstrap.Modal(modalEl);
-          modalEl.addEventListener('hidden.bs.modal', () => {
-            if (!_importConfirmed && _importTempFile) {
-              fetch('/cancel-df-import', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tempFile: _importTempFile }),
-              }).catch(() => {});
-              _importTempFile = null;
-            }
-          });
-        }
-        importPreviewModalInstance.show();
-      } catch (err) {
-        showToast(dfT('manage.import.errorPrefix') + escapeHtml(err.message), 'danger');
-      } finally {
-        btn.disabled = false;
-        btn.setAttribute('data-i18n', 'manage.importDf.label');
-        btn.textContent = dfT('manage.importDf.label');
-      }
-    }
-
-    // ── Drag & drop file .df sulla pagina ──────────────────────────────────────
-    let _dfDragCounter = 0;
-    document.addEventListener('dragenter', (e) => {
-      if (!(e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files'))) return;
-      e.preventDefault();
-      _dfDragCounter++;
-      document.getElementById('dfDropOverlay').classList.add('active');
-    });
-    document.addEventListener('dragleave', () => {
-      _dfDragCounter = Math.max(0, _dfDragCounter - 1);
-      if (_dfDragCounter === 0) document.getElementById('dfDropOverlay').classList.remove('active');
-    });
-    document.addEventListener('dragover', (e) => {
-      if (!(e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files'))) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    });
-    document.addEventListener('drop', (e) => {
-      e.preventDefault();
-      _dfDragCounter = 0;
-      document.getElementById('dfDropOverlay').classList.remove('active');
-      const files = [];
-      if (e.dataTransfer.items) {
-        for (const item of e.dataTransfer.items) {
-          if (item.kind === 'file') { const f = item.getAsFile(); if (f) files.push(f); }
-        }
-      }
-      if (!files.length) files.push(...Array.from(e.dataTransfer.files));
-      const dfFile = files.find(f => f.name.toLowerCase().endsWith('.df'));
-      if (dfFile) handleImportFile(dfFile);
-    });
-
-    document.getElementById('confirmImportBtn').addEventListener('click', async () => {
-      const confirmBtn = document.getElementById('confirmImportBtn');
-      confirmBtn.disabled = true;
-
-      const confirmedData = {
-        Cantiere: document.getElementById('previewCantiere').value,
-        'Nome Barca': document.getElementById('previewNomeBarca').value,
-        'Numero Scafo': document.getElementById('previewNumeroScafo').value,
-        Matricola: document.getElementById('previewMatricola').value,
-        Tipo: document.getElementById('previewTipo').value,
-        Operatore: document.getElementById('previewOperatore').value,
-        'Data e Ora Inserimento': document.getElementById('previewData').value,
-      };
-
-      const formData = new FormData();
-      formData.append('tempFile', _importTempFile);
-      formData.append('confirmedData', JSON.stringify(confirmedData));
-
-      try {
-        const res = await fetch('/import-df', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || dfT('manage.import.error'));
-
-        _importConfirmed = true;
-        importPreviewModalInstance.hide();
-
-        const r = data.newRecord;
-        const label = `${r.Cantiere} — ${r['Nome Barca']} (${r['Numero Scafo']})`;
-        const notesHtml = data.filesImported > 0
-          ? '<br><small>' + escapeHtml(dfT('manage.import.filesNote', { n: data.filesImported })) + '</small>'
-          : '';
-        showToast(dfT('manage.import.ok', { label: escapeHtml(label), notes: notesHtml }), 'success');
-        loadRecords();
-      } catch (err) {
-        showToast(dfT('manage.import.errorPrefix') + escapeHtml(err.message), 'danger');
-      } finally {
-        confirmBtn.disabled = false;
-      }
-    });
+    dfWirePageDfDrop(_manageImportCallbacks);
 
     // Ordinamento colonne
     document.querySelector('#recordsTable thead').addEventListener('click', e => {
@@ -1073,7 +868,6 @@ function openEdit(id) {
   </div>
 </div>
 
-<div id="dfDropOverlay"><div class="df-drop-inner">📥 Rilascia il file .df per importarlo</div></div>
 
 </body>
 </html>

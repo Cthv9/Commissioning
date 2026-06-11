@@ -63,7 +63,15 @@ function renderFileList() {
 }
 
 function addFiles(files) {
-  for (const f of files) {
+  const dfFiles = files.filter(f => f.name.toLowerCase().endsWith('.df'));
+  const regular = files.filter(f => !f.name.toLowerCase().endsWith('.df'));
+  if (dfFiles.length) {
+    dfFiles.forEach(f => dfHandleImportFile(f, {
+      onSuccess() { window.location.href = 'manage.html'; },
+      showError(msg) { alert(msg); },
+    }));
+  }
+  for (const f of regular) {
     if (!selectedFiles.find(x => x.name === f.name && x.size === f.size)) {
       selectedFiles.push(f);
     }
@@ -115,6 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn) return;
     selectedFiles.splice(Number(btn.dataset.idx), 1);
     renderFileList();
+  });
+
+  dfWirePageDfDrop({
+    onSuccess() { window.location.href = 'manage.html'; },
+    showError(msg) { alert(msg); },
   });
 });
 
