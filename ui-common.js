@@ -392,36 +392,45 @@ async function dfHandleImportFile(file, { onSuccess, showError } = {}) {
   }
 }
 
-// Drag & drop nativo Tauri: dentro l'app desktop gli eventi HTML5 non arrivano
-// (il drop target nativo di wry intercetta i drop), quindi si ascoltano gli
-// eventi Tauri e si ricostruiscono i File leggendo i path via comando Rust.
-// Nel browser (slave/LAN) restituisce false e restano gli handler HTML5.
+// Drag & drop nativo nell'app desktop: dentro la webview gli eventi HTML5 non
+// arrivano (il drop target nativo di wry intercetta i drop). Il lato Rust
+// inoltra gli eventi alla pagina via eval chiamando window.__dfNativeDragEvent
+// (l'IPC Tauri è bloccato per le pagine servite da http://127.0.0.1:3000);
+// i byte dei file si recuperano dal server locale con /local-file.
+// Nel browser (slave/LAN) il hook esiste ma non viene mai invocato.
 function dfWireNativeDrop({ onFiles, onDragState } = {}) {
-  if (!(window.__TAURI__ && window.__TAURI__.webview && window.__TAURI__.core)) return false;
   if (window.__dfNativeDropWired) return true;
   window.__dfNativeDropWired = true;
 
-  const setDragState = (active) => { if (onDragState) onDragState(active); };
+  const setDragState = (active) => {
+    try { if (onDragState) onDragState(active); } catch {}
+  };
 
-  window.__TAURI__.webview.getCurrentWebview().onDragDropEvent(async (ev) => {
-    const type = ev.payload && ev.payload.type;
-    if (type === 'enter' || type === 'over') { setDragState(true); return; }
-    if (type === 'leave') { setDragState(false); return; }
-    if (type !== 'drop') return;
-    setDragState(false);
+  window.__dfNativeDragEvent = async (ev) => {
+    try {
+      const type = ev && ev.type;
+      if (type === 'enter') { setDragState(true); return; }
+      if (type === 'leave') { setDragState(false); return; }
+      if (type !== 'drop') return;
+      setDragState(false);
 
-    const files = [];
-    for (const path of (ev.payload.paths || [])) {
-      try {
-        const bytes = await window.__TAURI__.core.invoke('read_dropped_file', { path });
-        const name = String(path).split(/[\\/]/).pop() || 'file';
-        files.push(new File([new Uint8Array(bytes)], name));
-      } catch (err) {
-        console.error('Lettura file droppato fallita:', path, err);
+      const files = [];
+      for (const path of (ev.paths || [])) {
+        try {
+          const res = await fetch('/local-file?path=' + encodeURIComponent(path));
+          if (!res.ok) { console.error('Lettura file droppato fallita:', path, res.status); continue; }
+          const blob = await res.blob();
+          const name = String(path).split(/[\\/]/).pop() || 'file';
+          files.push(new File([blob], name));
+        } catch (err) {
+          console.error('Lettura file droppato fallita:', path, err);
+        }
       }
+      if (files.length && onFiles) onFiles(files);
+    } catch (err) {
+      console.error('Errore drag&drop nativo:', err);
     }
-    if (files.length && onFiles) onFiles(files);
-  });
+  };
   return true;
 }
 

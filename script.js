@@ -125,19 +125,23 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFileList();
   });
 
-  // Dentro l'app desktop il drop arriva dagli eventi nativi Tauri; il wiring qui
-  // ha priorità su quello generico di dfWirePageDfDrop (guard singleton).
-  dfWireNativeDrop({
-    onFiles: addFiles,
-    onDragState: (active) => dropZone.classList.toggle('drag-over', !!active),
-  });
-
   // Allegati Outlook: il drag diretto non è supportato da WebView2/Chromium,
   // ma Ctrl+C sull'allegato + Ctrl+V qui funziona.
   document.addEventListener('paste', (e) => {
     const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
     if (files.length) { e.preventDefault(); addFiles(files); }
   });
+
+  // Dentro l'app desktop il drop arriva dagli eventi nativi inoltrati da Rust;
+  // il wiring qui ha priorità su quello generico di dfWirePageDfDrop (singleton).
+  try {
+    dfWireNativeDrop({
+      onFiles: addFiles,
+      onDragState: (active) => dropZone.classList.toggle('drag-over', !!active),
+    });
+  } catch (err) {
+    console.error('Wiring drag&drop nativo fallito:', err);
+  }
 
   dfWirePageDfDrop({
     onSuccess() { window.location.href = 'manage.html'; },

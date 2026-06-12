@@ -2188,7 +2188,7 @@ dependencies = [
 
 [[package]]
 name = "portale-commissioning"
-version = "3.3.0"
+version = "3.3.1"
 dependencies = [
  "tauri",
  "tauri-build",

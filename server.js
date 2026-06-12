@@ -520,6 +520,32 @@ app.post('/settings/uploads-root', (req, res) => {
 });
 
 /**
+ * Lettura file locale per il drag&drop nativo dell'app desktop: Tauri consegna
+ * solo i path, la pagina recupera i byte da qui. Solo richieste loopback.
+ */
+app.get('/local-file', (req, res) => {
+  const remote = req.socket.remoteAddress;
+  if (remote !== '127.0.0.1' && remote !== '::1' && remote !== '::ffff:127.0.0.1') {
+    return res.status(403).json({ error: 'Accesso consentito solo in locale.' });
+  }
+
+  const filePath = req.query.path ? String(req.query.path) : '';
+  let stat;
+  try {
+    stat = fs.statSync(filePath);
+  } catch {
+    return res.status(404).json({ error: 'File non trovato.' });
+  }
+  if (!stat.isFile()) return res.status(404).json({ error: 'File non trovato.' });
+
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Length', String(stat.size));
+  fs.createReadStream(filePath)
+    .on('error', () => { if (!res.headersSent) res.status(500).end(); else res.destroy(); })
+    .pipe(res);
+});
+
+/**
  * Records (con meta allegata se presente)
  */
 app.get('/records', (req, res) => {
