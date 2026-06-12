@@ -392,6 +392,39 @@ async function dfHandleImportFile(file, { onSuccess, showError } = {}) {
   }
 }
 
+// Drag & drop nativo Tauri: dentro l'app desktop gli eventi HTML5 non arrivano
+// (il drop target nativo di wry intercetta i drop), quindi si ascoltano gli
+// eventi Tauri e si ricostruiscono i File leggendo i path via comando Rust.
+// Nel browser (slave/LAN) restituisce false e restano gli handler HTML5.
+function dfWireNativeDrop({ onFiles, onDragState } = {}) {
+  if (!(window.__TAURI__ && window.__TAURI__.webview && window.__TAURI__.core)) return false;
+  if (window.__dfNativeDropWired) return true;
+  window.__dfNativeDropWired = true;
+
+  const setDragState = (active) => { if (onDragState) onDragState(active); };
+
+  window.__TAURI__.webview.getCurrentWebview().onDragDropEvent(async (ev) => {
+    const type = ev.payload && ev.payload.type;
+    if (type === 'enter' || type === 'over') { setDragState(true); return; }
+    if (type === 'leave') { setDragState(false); return; }
+    if (type !== 'drop') return;
+    setDragState(false);
+
+    const files = [];
+    for (const path of (ev.payload.paths || [])) {
+      try {
+        const bytes = await window.__TAURI__.core.invoke('read_dropped_file', { path });
+        const name = String(path).split(/[\\/]/).pop() || 'file';
+        files.push(new File([new Uint8Array(bytes)], name));
+      } catch (err) {
+        console.error('Lettura file droppato fallita:', path, err);
+      }
+    }
+    if (files.length && onFiles) onFiles(files);
+  });
+  return true;
+}
+
 function dfWirePageDfDrop({ onSuccess, showError } = {}) {
   if (document.getElementById('dfDropOverlay')) return;
 
@@ -442,10 +475,19 @@ function dfWirePageDfDrop({ onSuccess, showError } = {}) {
     const dfFile = files.find(f => f.name.toLowerCase().endsWith('.df'));
     if (dfFile) dfHandleImportFile(dfFile, { onSuccess, showError });
   });
+
+  dfWireNativeDrop({
+    onDragState(active) { overlay.classList.toggle('active', !!active); },
+    onFiles(files) {
+      const dfFile = files.find(f => f.name.toLowerCase().endsWith('.df'));
+      if (dfFile) dfHandleImportFile(dfFile, { onSuccess, showError });
+    },
+  });
 }
 
 window.dfHandleImportFile = dfHandleImportFile;
 window.dfWirePageDfDrop = dfWirePageDfDrop;
+window.dfWireNativeDrop = dfWireNativeDrop;
 
 function dfWireInfoButtons() {
   document.querySelectorAll('[data-df-info]').forEach(btn => {

@@ -17,6 +17,13 @@ fn select_directory(app: AppHandle) -> Option<String> {
         .map(|p| p.to_string())
 }
 
+#[tauri::command]
+fn read_dropped_file(path: String) -> Result<tauri::ipc::Response, String> {
+    std::fs::read(&path)
+        .map(tauri::ipc::Response::new)
+        .map_err(|e| e.to_string())
+}
+
 fn show_error_window(app_handle: &tauri::AppHandle, message: &str) {
     let encoded = message
         .replace('&', "&amp;")
@@ -47,7 +54,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(ServerProcess(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![select_directory])
+        .invoke_handler(tauri::generate_handler![select_directory, read_dropped_file])
         .setup(|app| {
             // In PRODUZIONE: avvia server.exe dalla resource directory
             // In DEV: il server è già avviato da beforeDevCommand (node server.js)
@@ -115,12 +122,14 @@ fn main() {
                     .inner_size(1280.0, 800.0)
                     .min_inner_size(900.0, 650.0)
                     .maximized(true)
-                    .drag_and_drop(false)
-                    .visible(false)
+                    // NOTA: la finestra deve nascere visibile e con il drag&drop nativo
+                    // di Tauri attivo (default): su Windows wry non registra il drop
+                    // target per finestre create nascoste (tauri#14643 / wry#1639) e
+                    // drag_and_drop(false) via builder non viene propagato (tauri#13761).
                     .build();
 
                     match result {
-                        Ok(win) => { let _ = win.show(); }
+                        Ok(_) => {}
                         Err(e) => {
                             eprintln!("ERRORE: impossibile creare la finestra principale: {}", e);
                             show_error_window(&app_handle, "Impossibile creare la finestra principale.");

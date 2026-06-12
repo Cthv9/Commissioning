@@ -112,7 +112,7 @@ h1 {
       <div id="dropZone" role="button" tabindex="0" aria-label="Zona trascinamento file">
         <input type="file" id="fileInput" multiple>
         <div id="dropLabel">
-          <div class="mb-1">Trascina i file qui oppure</div>
+          <div class="mb-1">Trascina i file qui, incollali (Ctrl+V) oppure</div>
           <button type="button" class="btn btn-outline-secondary btn-sm" id="browseBtn">Sfoglia…</button>
         </div>
         <ul class="list-unstyled mb-0 mt-2 text-start" id="fileList"></ul>
@@ -202,6 +202,13 @@ h1 {
   fileInput.addEventListener('change', () => {
     addFiles(Array.from(fileInput.files));
     fileInput.value = '';
+  });
+
+  // Allegati Outlook: il drag diretto non è supportato dai browser Chromium,
+  // ma Ctrl+C sull'allegato + Ctrl+V qui funziona.
+  document.addEventListener('paste', (e) => {
+    const pasted = Array.from((e.clipboardData && e.clipboardData.files) || []);
+    if (pasted.length) { e.preventDefault(); addFiles(pasted); }
   });
 
   function addFiles(files) {
