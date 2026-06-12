@@ -17,13 +17,6 @@ fn select_directory(app: AppHandle) -> Option<String> {
         .map(|p| p.to_string())
 }
 
-#[tauri::command]
-fn read_dropped_file(path: String) -> Result<tauri::ipc::Response, String> {
-    std::fs::read(&path)
-        .map(tauri::ipc::Response::new)
-        .map_err(|e| e.to_string())
-}
-
 fn show_error_window(app_handle: &tauri::AppHandle, message: &str) {
     let encoded = message
         .replace('&', "&amp;")
@@ -54,7 +47,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(ServerProcess(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![select_directory, read_dropped_file])
+        .invoke_handler(tauri::generate_handler![select_directory])
         .setup(|app| {
             // In PRODUZIONE: avvia server.exe dalla resource directory
             // In DEV: il server è già avviato da beforeDevCommand (node server.js)
@@ -141,15 +134,49 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Termina server.exe quando la finestra viene distrutta (solo produzione)
-            if let tauri::WindowEvent::Destroyed = event {
-                if let Some(state) = window.app_handle().try_state::<ServerProcess>() {
-                    if let Ok(mut guard) = state.0.lock() {
-                        if let Some(mut child) = guard.take() {
-                            let _ = child.kill();
+            match event {
+                // Inoltra il drag&drop nativo alla pagina via eval: la pagina è servita
+                // da http://127.0.0.1:3000 (origine remota per Tauri) e l'IPC JS è
+                // bloccato dalle ACL, quindi gli eventi tauri://drag-* non arrivano.
+                tauri::WindowEvent::DragDrop(drag_event) if window.label() == "main" => {
+                    let payload = match drag_event {
+                        tauri::DragDropEvent::Enter { .. } => {
+                            Some(serde_json::json!({ "type": "enter" }))
+                        }
+                        tauri::DragDropEvent::Leave => {
+                            Some(serde_json::json!({ "type": "leave" }))
+                        }
+                        tauri::DragDropEvent::Drop { paths, .. } => {
+                            let paths: Vec<String> = paths
+                                .iter()
+                                .map(|p| p.to_string_lossy().into_owned())
+                                .collect();
+                            Some(serde_json::json!({ "type": "drop", "paths": paths }))
+                        }
+                        // Over arriva di continuo durante il trascinamento: inutile
+                        _ => None,
+                    };
+                    if let Some(payload) = payload {
+                        if let Some(webview) = window.get_webview_window("main") {
+                            let js = format!(
+                                "window.__dfNativeDragEvent && window.__dfNativeDragEvent({});",
+                                payload
+                            );
+                            let _ = webview.eval(&js);
                         }
                     }
                 }
+                // Termina server.exe quando la finestra viene distrutta (solo produzione)
+                tauri::WindowEvent::Destroyed => {
+                    if let Some(state) = window.app_handle().try_state::<ServerProcess>() {
+                        if let Ok(mut guard) = state.0.lock() {
+                            if let Some(mut child) = guard.take() {
+                                let _ = child.kill();
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
         })
         .run(tauri::generate_context!())
