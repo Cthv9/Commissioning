@@ -58,7 +58,6 @@ jobs:
 
       - name: Audit dependencies
         run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
 
       - name: Install pkg globally
         run: npm install -g @yao-pkg/pkg
