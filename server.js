@@ -94,9 +94,18 @@ function getUploadsRootDir() {
   return s.uploadsRootDir || defaultUploadsRootDir;
 }
 
+/**
+ * Il profilo di dominio (Navale/Industriale) è deciso a BUILD-TIME, non a
+ * runtime: nell'app desktop, il wrapper Tauri (main.rs) lo "cuoce" nel
+ * binario con option_env! e lo passa a questo processo come env var quando
+ * lo avvia — non è mai esposto/modificabile dall'app in esecuzione (nessun
+ * selettore in UI), per evitare che un utente non esperto lo cambi per
+ * errore mentre l'app è in uso. Se assente (es. `node server.js` in dev),
+ * il default è "navale".
+ */
 function getDomainProfileId() {
-  const s = loadSettings();
-  return s.domainProfile || 'navale';
+  const raw = String(process.env.PORTALE_DOMAIN_PROFILE || 'navale').trim().toLowerCase();
+  return listProfileIds().includes(raw) ? raw : 'navale';
 }
 
 function getActiveProfile() {
@@ -583,16 +592,6 @@ app.post('/settings/uploads-root', requireAppOrigin, (req, res) => {
 
   const next = saveSettings({ uploadsRootDir: dir });
   res.json({ uploadsRootDir: next.uploadsRootDir });
-});
-
-app.post('/settings/domain-profile', requireAppOrigin, (req, res) => {
-  const id = (req.body && req.body.domainProfile) ? String(req.body.domainProfile).trim() : '';
-  if (!listProfileIds().includes(id)) {
-    return res.status(400).json({ error: 'Profilo di dominio non valido.' });
-  }
-  saveSettings({ domainProfile: id });
-  const p = getProfile(id);
-  res.json({ id: p.id, appTitle: p.appTitle, labels: p.labels, tipoOptions: p.tipoOptions });
 });
 
 /**

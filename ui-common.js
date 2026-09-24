@@ -142,61 +142,6 @@ function dfUpdateLangSwitcherActive() {
   });
 }
 
-async function dfInjectDomainProfileSwitcher(currentProfileId) {
-  const modalEl = document.getElementById('dfInfoModal');
-  if (!modalEl) return;
-  const body = modalEl.querySelector('.modal-body');
-  if (!body) return;
-
-  let wrap = body.querySelector('#dfDomainProfileSwitcher');
-  if (!wrap) {
-    wrap = document.createElement('div');
-    wrap.id = 'dfDomainProfileSwitcher';
-    wrap.className = 'mb-3 pb-3 border-bottom';
-    wrap.innerHTML = `
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <span class="small text-muted" data-i18n="info.domainProfile.label">Profilo di dominio</span>
-        <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Domain profile selector">
-          <button type="button" class="btn" data-df-profile="navale">Navale</button>
-          <button type="button" class="btn" data-df-profile="industriale">Industriale</button>
-        </div>
-      </div>
-    `;
-    body.insertBefore(wrap, body.firstChild);
-
-    wrap.querySelectorAll('[data-df-profile]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-df-profile');
-        if (id === wrap.dataset.active) return;
-        try {
-          await dfFetch('/settings/domain-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domainProfile: id }),
-          }).then(async (res) => {
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              throw new Error(err.error || dfT('error.settings.saveGeneric'));
-            }
-          });
-          // Il cambio profilo tocca etichette, opzioni "Tipo" e nome file Excel:
-          // un reload garantisce che tutta la pagina sia coerente col nuovo profilo.
-          location.reload();
-        } catch (e) {
-          alert(e.message || dfT('error.settings.saveGeneric'));
-        }
-      });
-    });
-  }
-
-  wrap.dataset.active = currentProfileId;
-  wrap.querySelectorAll('[data-df-profile]').forEach(btn => {
-    const active = btn.getAttribute('data-df-profile') === currentProfileId;
-    btn.classList.toggle('btn-primary', active);
-    btn.classList.toggle('btn-outline-primary', !active);
-  });
-}
-
 async function dfOpenInfoModal() {
   dfHideOtherModals();
   try {
@@ -204,7 +149,6 @@ async function dfOpenInfoModal() {
     dfSetText('dfAppVersion', `v${s.version}`);
     const inp = document.getElementById('dfUploadsRootDir');
     if (inp) inp.value = s.uploadsRootDir || '';
-    await dfInjectDomainProfileSwitcher(s.domainProfile || 'navale');
   } catch (e) {
     console.warn('dfLoadSettings failed:', e);
     dfSetText('dfAppVersion', '—');
