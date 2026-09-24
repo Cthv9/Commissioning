@@ -10,7 +10,8 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "npm run pkg:server && npm run build:sidecar && tauri build --config src-tauri/tauri.prod.conf.json",
     "rebuild:excel": "node rebuild_excel.js",
-    "import:df": "node import_df.js"
+    "import:df": "node import_df.js",
+    "test": "node --test test/*.test.js"
   },
   "keywords": [],
   "author": "",
@@ -19,12 +20,12 @@
     "adm-zip": "^0.5.17",
     "express": "^4.21.1",
     "multer": "^1.4.5-lts.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/cli": "^2",
-    "pkg": "^5.8.1"
+    "@tauri-apps/api": "2.10.1",
+    "@tauri-apps/cli": "2.10.1",
+    "@yao-pkg/pkg": "^6.22.0"
   },
   "pkg": {
     "scripts": "server.js",

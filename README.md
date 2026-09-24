@@ -26,6 +26,34 @@ App desktop Windows per la registrazione e gestione dei record di commissioning 
 | Export | **jsPDF** + **jsPDF AutoTable** (bundle locale) |
 | Dati | Excel (`.xlsx`) + backup JSONL |
 
+## Profili di dominio
+
+Il tool supporta due profili di dominio: **Navale** e **Industriale**. Il profilo determina la terminologia mostrata in UI (es. "Cantiere" → "Costruttore", "Nome Barca" → "Nome Macchina", "Numero Scafo" → "Modello Motore") e l'elenco di valori disponibili per il campo "Tipo", ma il formato dati sottostante (colonne dell'Excel, struttura dei record e dei metadati audit) resta identico tra i due profili, per garantire piena compatibilità dei dati esistenti.
+
+**Il profilo è deciso a build-time, non è un'impostazione modificabile dall'app in esecuzione.** Ogni installer viene compilato con la variabile d'ambiente `PORTALE_DOMAIN_PROFILE` (`navale` o `industriale`, default `navale` se assente) impostata *prima* della build: Tauri la "cuoce" nel binario e la passa al server all'avvio (vedi `src-tauri/src/main.rs`). Non esiste alcun selettore in UI: è una scelta deliberata per evitare che un utente non esperto cambi profilo per errore mentre l'app è in uso (cambiare profilo cambia anche il nome del file Excel letto/scritto, e un cambio accidentale sembrerebbe "far perdere" tutti i record). La pipeline CI (`.github/workflows/build.yml`) produce già entrambi gli installer ad ogni release, uno per profilo.
+
+Per compilare manualmente un installer per un profilo specifico:
+
+```bash
+PORTALE_DOMAIN_PROFILE=industriale npm run tauri:build
+```
+
+Il profilo Industriale riunisce in questo stesso tool le funzionalità già offerte dal repository gemello `commissioning_ind`, che viene deprecato a favore del portale unificato.
+
+### Migrazione da Commissioning_IND
+
+Per migrare da un'installazione esistente di `commissioning_ind` al Portale Commissioning unificato:
+
+1. Installare la build **Industriale** del portale unificato (scaricabile dalla Release GitHub di questo repo).
+2. Puntare la cartella dati/share di rete allo stesso percorso già in uso da `commissioning_ind`, così che l'Excel dei record industriali continui a essere letto/scritto nello stesso posto.
+3. Eseguire lo script di migrazione per copiare i backup locali esistenti:
+
+   ```bash
+   node scripts/migrate-ind-to-unified.js --from <cartella-backup-IND>
+   ```
+
+   Lo script è **idempotente** (può essere eseguito più volte senza effetti duplicati) e **non modifica il file Excel**: agisce solo sui backup locali (snapshot JSON, metadati audit, copie storiche), lasciando l'Excel condiviso come unica fonte "master" già in uso.
+
 ## Prerequisiti di sviluppo
 
 - [Node.js](https://nodejs.org/) 18+

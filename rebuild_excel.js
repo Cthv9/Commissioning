@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const xlsx = require('xlsx');
+const { BASE_EXCEL_HEADERS } = require('./domain-profile');
 
 const rootDir = process.env.PORTALE_ROOT_DIR || '';
 if (!rootDir) {
@@ -16,16 +17,8 @@ const backupDir =
 
 const snapshotPath = path.join(backupDir, 'records_latest.json');
 
-const BASE_HEADERS = [
-  'ID',
-  'Cantiere',
-  'Nome Barca',
-  'Numero Scafo',
-  'Matricola',
-  'Tipo',
-  'Operatore',
-  'Data e Ora Inserimento',
-];
+// Fonte unica di verità per l'header Excel (vedi domain-profile.js).
+const BASE_HEADERS = BASE_EXCEL_HEADERS;
 
 function ensureDir(p) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });

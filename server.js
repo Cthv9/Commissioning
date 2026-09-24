@@ -3,9 +3,17 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { execFile, spawn } = require('child_process');
 const xlsx = require('xlsx');
 const AdmZip = require('adm-zip');
+const { getProfile, listProfileIds } = require('./domain-profile');
+const { safeJsonParse } = require('./safe-json');
+
+// Token in-memory generato una sola volta all'avvio del processo: serve a
+// far riconoscere al server le richieste provenienti dalle pagine servite
+// dalla stessa origine (vedi GET /app-token e middleware requireAppOrigin).
+const APP_TOKEN = crypto.randomBytes(24).toString('hex');
 
 /**
  * Percorso share (fonte ufficiale file + Excel)
@@ -86,8 +94,34 @@ function getUploadsRootDir() {
   return s.uploadsRootDir || defaultUploadsRootDir;
 }
 
+/**
+ * Il profilo di dominio (Navale/Industriale) è deciso a BUILD-TIME, non a
+ * runtime: nell'app desktop, il wrapper Tauri (main.rs) lo "cuoce" nel
+ * binario con option_env! e lo passa a questo processo come env var quando
+ * lo avvia — non è mai esposto/modificabile dall'app in esecuzione (nessun
+ * selettore in UI), per evitare che un utente non esperto lo cambi per
+ * errore mentre l'app è in uso. Se assente (es. `node server.js` in dev),
+ * il default è "navale".
+ */
+function getDomainProfileId() {
+  const raw = String(process.env.PORTALE_DOMAIN_PROFILE || 'navale').trim().toLowerCase();
+  return listProfileIds().includes(raw) ? raw : 'navale';
+}
+
+function getActiveProfile() {
+  return getProfile(getDomainProfileId());
+}
+
 function getExcelPath() {
-  return path.join(getUploadsRootDir(), 'Barche_Commissionate.xlsx');
+  return path.join(getUploadsRootDir(), getActiveProfile().defaultExcelFileName);
+}
+
+function getExcelBaseName() {
+  return path.basename(getActiveProfile().defaultExcelFileName, '.xlsx');
+}
+
+function escapeRegExp(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function getUploadsRootsToTry() {
@@ -122,25 +156,28 @@ function cleanupBackupArtifacts() {
       try { fs.unlinkSync(legacyCsv); } catch {}
     }
 
-    // 2) Pulisci tmp_uploads (creati da versioni precedenti): elimina cartelle più vecchie di 2 giorni
+    // 2) Pulisci tmp_uploads (creati da versioni precedenti): elimina cartelle più vecchie di N giorni (configurabile)
     const tmpDir = path.join(backupDir, 'tmp_uploads');
     if (fs.existsSync(tmpDir)) {
       const now = Date.now();
+      const retentionDays = Number(loadSettings().tmpUploadsRetentionDays) || 2;
       for (const name of fs.readdirSync(tmpDir)) {
         const p = path.join(tmpDir, name);
         try {
           const st = fs.statSync(p);
           const ageDays = (now - st.mtimeMs) / (1000 * 60 * 60 * 24);
-          if (ageDays > 2) fs.rmSync(p, { recursive: true, force: true });
+          if (ageDays > retentionDays) fs.rmSync(p, { recursive: true, force: true });
         } catch {}
       }
     }
 
-    // 3) Retention dei backup Excel: tieni gli ultimi 15 file, cancella il resto
+    // 3) Retention dei backup Excel: tieni gli ultimi N file (configurabile), cancella il resto
+    // TODO: implementare anche la pulizia periodica basata su settings.auditRetentionMonths (audit trail / meta.json).
     const excelDir = path.join(backupDir, 'excel');
     if (fs.existsSync(excelDir)) {
+      const excelBaseNameRe = new RegExp(`^${escapeRegExp(getExcelBaseName())}_.*\\.xlsx$`, 'i');
       const files = fs.readdirSync(excelDir)
-        .filter(f => /^Barche_Commissionate_.*\.xlsx$/i.test(f))
+        .filter(f => excelBaseNameRe.test(f))
         .map(f => ({ f, p: path.join(excelDir, f), m: fs.statSync(path.join(excelDir, f)).mtimeMs }))
         .sort((a, b) => b.m - a.m);
 
@@ -299,9 +336,10 @@ function persistBackup(action, recordOrInfo, fullRecords) {
     if (fs.existsSync(excelPath)) {
       ensureDir(backupFiles.excelCopiesDir);
       const stamp = ts.replace(/[:.]/g, '-');
-      const dest = path.join(backupFiles.excelCopiesDir, `Barche_Commissionate_${stamp}.xlsx`);
+      const dest = path.join(backupFiles.excelCopiesDir, `${getExcelBaseName()}_${stamp}.xlsx`);
       fs.copyFileSync(excelPath, dest);
-      rotateExcelCopies(50);
+      const maxKeep = Number(loadSettings().maxExcelBackupCopies) || 50;
+      rotateExcelCopies(maxKeep);
     }
   } catch {
     // no-op
@@ -502,16 +540,53 @@ app.get('/options', (req, res) => {
  * Impostazioni (UI)
  */
 app.get('/settings', (req, res) => {
+  const s = loadSettings();
   res.json({
     appName: appPkg.name,
     version: appPkg.version,
     excelRootDir: getUploadsRootDir(),
     uploadsRootDir: getUploadsRootDir(),
     backupDir,
+    domainProfile: getDomainProfileId(),
+    maxExcelBackupCopies: Number(s.maxExcelBackupCopies) || 50,
+    tmpUploadsRetentionDays: Number(s.tmpUploadsRetentionDays) || 2,
+    auditRetentionMonths: Number(s.auditRetentionMonths) || 24,
   });
 });
 
-app.post('/settings/uploads-root', (req, res) => {
+/**
+ * Profilo di dominio attivo (navale/industriale) — pubblico, usato dalla UI
+ * per etichette, opzioni "Tipo" e titolo app.
+ */
+app.get('/domain-profile', (req, res) => {
+  const p = getActiveProfile();
+  res.json({ id: p.id, appTitle: p.appTitle, labels: p.labels, tipoOptions: p.tipoOptions });
+});
+
+/**
+ * Token in-memory per riconoscere le richieste provenienti dalla pagina
+ * servita dalla stessa origine (nessun side effect; pubblico per definizione,
+ * ma leggibile solo dalla stessa origine per via del CORS).
+ */
+app.get('/app-token', (req, res) => {
+  res.json({ token: APP_TOKEN });
+});
+
+/**
+ * Middleware anti-CSRF "locale": richiede che la richiesta provenga dalla
+ * pagina servita da questo stesso server (che conosce APP_TOKEN via
+ * GET /app-token). Non è pensato come autenticazione forte, ma per impedire
+ * che una pagina web esterna aperta nello stesso browser possa invocare
+ * queste route in modo silenzioso.
+ */
+function requireAppOrigin(req, res, next) {
+  if (req.header('X-Portale-Client') !== APP_TOKEN) {
+    return res.status(403).json({ error: 'Richiesta non autorizzata.' });
+  }
+  next();
+}
+
+app.post('/settings/uploads-root', requireAppOrigin, (req, res) => {
   const dir = (req.body && req.body.uploadsRootDir) ? String(req.body.uploadsRootDir).trim() : '';
   if (!dir) return res.status(400).json({ error: 'Destinazione non valida.' });
 
@@ -524,20 +599,31 @@ app.post('/settings/uploads-root', (req, res) => {
  * solo i path, la pagina recupera i byte da qui. Solo richieste loopback.
  */
 app.get('/local-file', (req, res) => {
+  const filePath = req.query.path ? String(req.query.path) : '';
+
   const remote = req.socket.remoteAddress;
   if (remote !== '127.0.0.1' && remote !== '::1' && remote !== '::ffff:127.0.0.1') {
+    console.log(`[local-file] path="${filePath}" esito=403 (non loopback)`);
     return res.status(403).json({ error: 'Accesso consentito solo in locale.' });
   }
+  if (req.header('X-Portale-Client') !== APP_TOKEN) {
+    console.log(`[local-file] path="${filePath}" esito=403 (header mancante/non valido)`);
+    return res.status(403).json({ error: 'Richiesta non autorizzata.' });
+  }
 
-  const filePath = req.query.path ? String(req.query.path) : '';
   let stat;
   try {
     stat = fs.statSync(filePath);
   } catch {
+    console.log(`[local-file] path="${filePath}" esito=404`);
     return res.status(404).json({ error: 'File non trovato.' });
   }
-  if (!stat.isFile()) return res.status(404).json({ error: 'File non trovato.' });
+  if (!stat.isFile()) {
+    console.log(`[local-file] path="${filePath}" esito=404`);
+    return res.status(404).json({ error: 'File non trovato.' });
+  }
 
+  console.log(`[local-file] path="${filePath}" esito=200`);
   res.setHeader('Content-Type', 'application/octet-stream');
   res.setHeader('Content-Length', String(stat.size));
   fs.createReadStream(filePath)
@@ -614,7 +700,7 @@ app.post('/upload', upload.array('files[]'), (req, res) => {
 /**
  * Update record + eventuale rename cartella + backup
  */
-app.put('/records/:id', (req, res) => {
+app.put('/records/:id', requireAppOrigin, (req, res) => {
   const dataWithMeta = readExcel();
   const baseRecords = dataWithMeta.map(r => {
     const out = {};
@@ -687,7 +773,7 @@ app.put('/records/:id', (req, res) => {
 /**
  * Delete record + elimina cartella + backup
  */
-app.delete('/records/:id', (req, res) => {
+app.delete('/records/:id', requireAppOrigin, (req, res) => {
   const dataWithMeta = readExcel();
   const baseRecords = dataWithMeta.map(r => {
     const out = {};
@@ -754,7 +840,7 @@ app.delete('/records/:id', (req, res) => {
 /**
  * Apri cartella allegati in Esplora risorse (Windows).
  */
-app.post('/records/:id/open-folder', (req, res) => {
+app.post('/records/:id/open-folder', requireAppOrigin, (req, res) => {
   const id = Number(req.params.id);
   const record = readExcel().find(r => Number(r.ID) === id);
   if (!record) return res.status(404).json({ error: 'Record non trovato.' });
@@ -786,7 +872,7 @@ app.post('/records/:id/open-folder', (req, res) => {
     .catch(err => res.status(500).json({ error: 'Errore durante l\'apertura della cartella', details: String(err.message || err) }));
 });
 
-app.post('/open-root', (req, res) => {
+app.post('/open-root', requireAppOrigin, (req, res) => {
   openInExplorer(getUploadsRootDir())
     .then(() => res.json({ ok: true }))
     .catch(err => res.status(500).json({ error: 'Errore apertura cartella radice', details: String(err.message || err) }));
@@ -797,7 +883,7 @@ app.post('/open-root', (req, res) => {
  * ATTENZIONE: sovrascrive Barche_Commissionate.xlsx
  */
 let rebuildingExcel = false;
-app.post('/admin/rebuild-excel', (req, res) => {
+app.post('/admin/rebuild-excel', requireAppOrigin, (req, res) => {
   if (rebuildingExcel) {
     return res.status(409).json({ error: 'Ricostruzione già in corso, attendere.' });
   }
@@ -845,7 +931,7 @@ const dfUpload = multer({
   },
 });
 
-app.post('/preview-df', dfUpload.single('dfFile'), (req, res) => {
+app.post('/preview-df', requireAppOrigin, dfUpload.single('dfFile'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nessun file .df ricevuto.' });
   const dfPath = req.file.path;
   try {
@@ -856,7 +942,7 @@ app.post('/preview-df', dfUpload.single('dfFile'), (req, res) => {
       return res.status(400).json({ error: 'record.json non trovato nel pacchetto .df' });
     }
     let record;
-    try { record = JSON.parse(recordEntry.getData().toString('utf8')); }
+    try { record = safeJsonParse(recordEntry.getData().toString('utf8')); }
     catch (e) {
       try { fs.unlinkSync(dfPath); } catch {}
       return res.status(400).json({ error: 'record.json non è un JSON valido: ' + e.message });
@@ -903,7 +989,7 @@ app.post('/preview-df', dfUpload.single('dfFile'), (req, res) => {
   }
 });
 
-app.post('/cancel-df-import', express.json(), (req, res) => {
+app.post('/cancel-df-import', requireAppOrigin, express.json(), (req, res) => {
   const safeName = path.basename(String(req.body?.tempFile || ''));
   if (safeName) {
     const tmpPath = path.join(backupDir, 'tmp_df_imports', safeName);
@@ -912,7 +998,7 @@ app.post('/cancel-df-import', express.json(), (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/import-df', dfUpload.single('dfFile'), (req, res) => {
+app.post('/import-df', requireAppOrigin, dfUpload.single('dfFile'), (req, res) => {
   let dfPath;
 
   if (req.body && req.body.tempFile) {
@@ -936,14 +1022,14 @@ app.post('/import-df', dfUpload.single('dfFile'), (req, res) => {
 
     let record;
     try {
-      record = JSON.parse(recordEntry.getData().toString('utf8'));
+      record = safeJsonParse(recordEntry.getData().toString('utf8'));
     } catch (e) {
       return res.status(400).json({ error: 'record.json non è un JSON valido: ' + e.message });
     }
 
     // Override con valori confermati/corretti dall'utente (flusso preview)
     if (req.body && req.body.confirmedData) {
-      try { Object.assign(record, JSON.parse(req.body.confirmedData)); } catch {}
+      try { Object.assign(record, safeJsonParse(req.body.confirmedData)); } catch {}
     }
 
     // Normalizza i valori rispetto a quelli esistenti

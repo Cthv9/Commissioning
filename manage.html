@@ -70,12 +70,12 @@
         <thead class="table-light">
           <tr>
             <th data-sort="ID" style="width:70px; cursor:pointer; user-select:none;"><span data-i18n="manage.col.id">ID</span> <span class="sort-icon">↓</span></th>
-            <th data-sort="Cantiere" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.cantiere">Cantiere</span> <span class="sort-icon"></span></th>
-            <th data-sort="Nome Barca" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.nomeBarca">Nome Barca</span> <span class="sort-icon"></span></th>
-            <th data-sort="Numero Scafo" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.numeroScafo">Numero Scafo</span> <span class="sort-icon"></span></th>
-            <th data-i18n="manage.col.matricola">Matricola</th>
-            <th data-sort="Tipo" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.tipo">Tipo</span> <span class="sort-icon"></span></th>
-            <th data-sort="Operatore" style="cursor:pointer; user-select:none;"><span data-i18n="manage.col.operatore">Operatore</span> <span class="sort-icon"></span></th>
+            <th data-sort="Cantiere" style="cursor:pointer; user-select:none;"><span data-df-label="entita" data-i18n="manage.col.cantiere">Cantiere</span> <span class="sort-icon"></span></th>
+            <th data-sort="Nome Barca" style="cursor:pointer; user-select:none;"><span data-df-label="asset" data-i18n="manage.col.nomeBarca">Nome Barca</span> <span class="sort-icon"></span></th>
+            <th data-sort="Numero Scafo" style="cursor:pointer; user-select:none;"><span data-df-label="identificativo" data-i18n="manage.col.numeroScafo">Numero Scafo</span> <span class="sort-icon"></span></th>
+            <th data-df-label="matricola" data-i18n="manage.col.matricola">Matricola</th>
+            <th data-sort="Tipo" style="cursor:pointer; user-select:none;"><span data-df-label="tipo" data-i18n="manage.col.tipo">Tipo</span> <span class="sort-icon"></span></th>
+            <th data-sort="Operatore" style="cursor:pointer; user-select:none;"><span data-df-label="operatore" data-i18n="manage.col.operatore">Operatore</span> <span class="sort-icon"></span></th>
             <th data-sort="Data e Ora Inserimento" style="width:180px; cursor:pointer; user-select:none;"><span data-i18n="manage.col.dataInserimento">Data Inserimento</span> <span class="sort-icon"></span></th>
             <th style="width: 170px;" data-i18n="manage.col.azioni">Azioni</th>
           </tr>
@@ -116,27 +116,27 @@
               </div>
 
               <div class="col-md-6">
-                <label class="form-label" data-i18n="edit.label.cantiere">Cantiere</label>
+                <label class="form-label" data-df-label="entita" data-i18n="edit.label.cantiere">Cantiere</label>
                 <input id="editCantiere" class="form-control">
               </div>
 
               <div class="col-md-6">
-                <label class="form-label" data-i18n="edit.label.nomeBarca">Nome barca</label>
+                <label class="form-label" data-df-label="asset" data-i18n="edit.label.nomeBarca">Nome barca</label>
                 <input id="editNomeBarca" class="form-control">
               </div>
 
               <div class="col-md-3">
-                <label class="form-label" data-i18n="edit.label.numeroScafo">Numero scafo</label>
+                <label class="form-label" data-df-label="identificativo" data-i18n="edit.label.numeroScafo">Numero scafo</label>
                 <input id="editNumeroScafo" class="form-control">
               </div>
 
               <div class="col-md-3">
-                <label class="form-label" data-i18n="edit.label.matricola">Matricola</label>
+                <label class="form-label" data-df-label="matricola" data-i18n="edit.label.matricola">Matricola</label>
                 <input id="editMatricola" class="form-control">
               </div>
 
               <div class="col-md-4">
-                <label class="form-label" data-i18n="edit.label.tipo">Tipo</label>
+                <label class="form-label" data-df-label="tipo" data-i18n="edit.label.tipo">Tipo</label>
                 <select id="editTipo" class="form-select">
                   <option value="Avviamento">Avviamento</option>
                   <option value="Commissioning">Commissioning</option>
@@ -144,7 +144,7 @@
               </div>
 
               <div class="col-md-8">
-                <label class="form-label" data-i18n="edit.label.operatore">Operatore</label>
+                <label class="form-label" data-df-label="operatore" data-i18n="edit.label.operatore">Operatore</label>
                 <input id="editOperatore" class="form-control">
               </div>
             </div>

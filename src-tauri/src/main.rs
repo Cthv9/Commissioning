@@ -8,6 +8,17 @@ use tauri_plugin_dialog::DialogExt;
 // Handle al processo server per terminarlo alla chiusura (solo produzione)
 struct ServerProcess(Mutex<Option<std::process::Child>>);
 
+// Profilo di dominio (Navale/Industriale) deciso a BUILD-TIME, non a runtime:
+// la variabile d'ambiente PORTALE_DOMAIN_PROFILE deve essere impostata PRIMA
+// della compilazione (tipicamente da un job/matrix CI diverso per ciascun
+// installer). Il valore viene "cotto" nel binario da option_env! e non è mai
+// esposto né modificabile dall'app in esecuzione (nessun selettore in UI):
+// evita che un utente non esperto cambi profilo per errore a runtime.
+const DOMAIN_PROFILE: &str = match option_env!("PORTALE_DOMAIN_PROFILE") {
+    Some(v) => v,
+    None => "navale",
+};
+
 #[tauri::command]
 fn select_directory(app: AppHandle) -> Option<String> {
     app.dialog()
@@ -61,6 +72,7 @@ fn main() {
                         let server_path = resource_dir.join("server.exe");
                         let mut cmd = std::process::Command::new(&server_path);
                         cmd.env("PORTALE_BACKUP_DIR", &backup_dir);
+                        cmd.env("PORTALE_DOMAIN_PROFILE", DOMAIN_PROFILE);
                         #[cfg(target_os = "windows")]
                         {
                             use std::os::windows::process::CommandExt;

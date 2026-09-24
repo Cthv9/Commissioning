@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
+const { safeJsonParse } = require('./safe-json');
 
 function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
@@ -125,7 +126,7 @@ function main() {
 
     let record;
     try {
-      record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+      record = safeJsonParse(fs.readFileSync(recordPath, 'utf8'));
     } catch (e) {
       console.error('record.json non è un JSON valido:', e.message);
       process.exit(1);
