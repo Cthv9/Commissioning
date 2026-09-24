@@ -4,7 +4,7 @@
   "description": "Portale Commissioning",
   "scripts": {
     "dev:server": "node server.js",
-    "pkg:server": "pkg server.js --targets node18-win-x64 --output server-dist/server.exe",
+    "pkg:server": "pkg server.js --targets node22-win-x64 --output server-dist/server.exe",
     "build:sidecar": "node scripts/build-sidecar.js",
     "tauri": "node scripts/tauri-wrapper.js",
     "tauri:dev": "tauri dev",
@@ -33,7 +33,7 @@
       "package.json"
     ],
     "targets": [
-      "node18-win-x64"
+      "node22-win-x64"
     ],
     "outputPath": "server-dist"
   }

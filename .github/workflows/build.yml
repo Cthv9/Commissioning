@@ -33,7 +33,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          # Node 22+ è richiesto per eseguire il tool di build @yao-pkg/pkg
+          # (engines.node >=22.0.0) — non è il runtime del server in produzione,
+          # che resta il binario impacchettato da pkg (vedi target sotto).
+          node-version: '22'
           cache: 'npm'
 
       - name: Install Rust
