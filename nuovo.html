@@ -37,28 +37,28 @@
     <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="POST" novalidate>
       <div class="row g-2 mb-2">
         <div class="col-7">
-          <label for="cantiere" class="form-label mb-1"><span data-i18n="nuovo.label.cantiere">Cantiere Costruttore</span> <span class="text-danger">*</span></label>
+          <label for="cantiere" class="form-label mb-1"><span data-df-label="entita" data-i18n="nuovo.label.cantiere">Cantiere Costruttore</span> <span class="text-danger">*</span></label>
           <input type="text" class="form-control form-control-sm" id="cantiere" name="cantiere" list="cantiereList" autocomplete="off" required>
           <datalist id="cantiereList"></datalist>
           <div class="form-text" style="font-size:0.75rem;" data-i18n="nuovo.label.suggest">Suggerimenti automatici (riduce refusi)</div>
         </div>
         <div class="col-5">
-          <label for="nomeBarca" class="form-label mb-1"><span data-i18n="nuovo.label.nomeBarca">Nome Barca</span> <span class="text-danger">*</span></label>
+          <label for="nomeBarca" class="form-label mb-1"><span data-df-label="asset" data-i18n="nuovo.label.nomeBarca">Nome Barca</span> <span class="text-danger">*</span></label>
           <input type="text" class="form-control form-control-sm" id="nomeBarca" name="nomeBarca" required>
         </div>
       </div>
 
       <div class="row g-2 mb-2">
         <div class="col-5">
-          <label for="numeroScafo" class="form-label mb-1"><span data-i18n="nuovo.label.numeroScafo">Numero Scafo</span> <span class="text-danger">*</span></label>
+          <label for="numeroScafo" class="form-label mb-1"><span data-df-label="identificativo" data-i18n="nuovo.label.numeroScafo">Numero Scafo</span> <span class="text-danger">*</span></label>
           <input type="text" class="form-control form-control-sm" id="numeroScafo" name="numeroScafo" required>
         </div>
         <div class="col-4">
-          <label for="matricola" class="form-label mb-1" data-i18n="nuovo.label.matricola">Matricola</label>
+          <label for="matricola" class="form-label mb-1" data-df-label="matricola" data-i18n="nuovo.label.matricola">Matricola</label>
           <input type="text" class="form-control form-control-sm" id="matricola" name="matricola">
         </div>
         <div class="col-3">
-          <label for="tipo" class="form-label mb-1"><span data-i18n="nuovo.label.tipo">Tipo</span> <span class="text-danger">*</span></label>
+          <label for="tipo" class="form-label mb-1"><span data-df-label="tipo" data-i18n="nuovo.label.tipo">Tipo</span> <span class="text-danger">*</span></label>
           <select class="form-select form-select-sm" id="tipo" name="tipo" required>
             <option value="Avviamento" data-i18n="nuovo.tipo.avviamento">Avviamento</option>
             <option value="Commissioning" data-i18n="nuovo.tipo.commissioning">Commissioning</option>
@@ -67,7 +67,7 @@
       </div>
 
       <div class="mb-2">
-        <label for="operatore" class="form-label mb-1"><span data-i18n="nuovo.label.operatore">Operatore</span> <span class="text-danger">*</span></label>
+        <label for="operatore" class="form-label mb-1"><span data-df-label="operatore" data-i18n="nuovo.label.operatore">Operatore</span> <span class="text-danger">*</span></label>
         <input type="text" class="form-control form-control-sm" id="operatore" name="operatore" list="operatoreList" autocomplete="off" required>
         <datalist id="operatoreList"></datalist>
       </div>

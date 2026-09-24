@@ -5,6 +5,65 @@ function dfT(key, params) {
   return key;
 }
 
+// ── Token anti-CSRF "locale" (vedi GET /app-token e middleware
+// requireAppOrigin lato server) + wrapper fetch che lo inietta su ogni
+// richiesta non-GET verso il backend. ──────────────────────────────────────
+if (typeof window !== 'undefined') {
+  fetch('/app-token')
+    .then(r => r.json())
+    .then(({ token }) => { window.__dfAppToken = token; })
+    .catch(err => console.warn('Impossibile recuperare /app-token:', err));
+}
+
+function dfFetch(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method === 'GET') return fetch(url, options);
+  return fetch(url, {
+    ...options,
+    headers: { 'X-Portale-Client': window.__dfAppToken || '', ...(options.headers || {}) },
+  });
+}
+
+window.dfFetch = dfFetch;
+
+// ── Etichette di dominio (navale/industriale): applica a runtime le
+// etichette del profilo attivo agli elementi marcati data-df-label. ────────
+async function dfApplyDomainLabels() {
+  let profile = null;
+  try {
+    const res = await fetch('/domain-profile');
+    if (!res.ok) return;
+    profile = await res.json();
+  } catch (err) {
+    console.warn('Impossibile recuperare /domain-profile:', err);
+    return;
+  }
+  if (!profile || !profile.labels) return;
+
+  document.querySelectorAll('[data-df-label]').forEach(el => {
+    const key = el.getAttribute('data-df-label');
+    const value = profile.labels[key];
+    if (value === undefined || value === null) return;
+
+    const target = el.getAttribute('data-df-label-target');
+    if (target === 'placeholder') {
+      el.setAttribute('placeholder', value);
+    } else if (target === 'value') {
+      el.value = value;
+    } else {
+      el.textContent = value;
+    }
+  });
+
+  if (profile.appTitle) {
+    document.title = profile.appTitle;
+    const titleEl = document.getElementById('app-title');
+    if (titleEl) titleEl.textContent = profile.appTitle;
+  }
+}
+
+window.dfApplyDomainLabels = dfApplyDomainLabels;
+
 function dfHideOtherModals() {
   try {
     const editEl = document.getElementById('editModal');
@@ -23,7 +82,7 @@ async function dfLoadSettings() {
 }
 
 async function dfSaveUploadsRootDir(dir) {
-  const res = await fetch('/settings/uploads-root', {
+  const res = await dfFetch('/settings/uploads-root', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ uploadsRootDir: dir })
@@ -83,6 +142,61 @@ function dfUpdateLangSwitcherActive() {
   });
 }
 
+async function dfInjectDomainProfileSwitcher(currentProfileId) {
+  const modalEl = document.getElementById('dfInfoModal');
+  if (!modalEl) return;
+  const body = modalEl.querySelector('.modal-body');
+  if (!body) return;
+
+  let wrap = body.querySelector('#dfDomainProfileSwitcher');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'dfDomainProfileSwitcher';
+    wrap.className = 'mb-3 pb-3 border-bottom';
+    wrap.innerHTML = `
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="small text-muted" data-i18n="info.domainProfile.label">Profilo di dominio</span>
+        <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Domain profile selector">
+          <button type="button" class="btn" data-df-profile="navale">Navale</button>
+          <button type="button" class="btn" data-df-profile="industriale">Industriale</button>
+        </div>
+      </div>
+    `;
+    body.insertBefore(wrap, body.firstChild);
+
+    wrap.querySelectorAll('[data-df-profile]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-df-profile');
+        if (id === wrap.dataset.active) return;
+        try {
+          await dfFetch('/settings/domain-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domainProfile: id }),
+          }).then(async (res) => {
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || dfT('error.settings.saveGeneric'));
+            }
+          });
+          // Il cambio profilo tocca etichette, opzioni "Tipo" e nome file Excel:
+          // un reload garantisce che tutta la pagina sia coerente col nuovo profilo.
+          location.reload();
+        } catch (e) {
+          alert(e.message || dfT('error.settings.saveGeneric'));
+        }
+      });
+    });
+  }
+
+  wrap.dataset.active = currentProfileId;
+  wrap.querySelectorAll('[data-df-profile]').forEach(btn => {
+    const active = btn.getAttribute('data-df-profile') === currentProfileId;
+    btn.classList.toggle('btn-primary', active);
+    btn.classList.toggle('btn-outline-primary', !active);
+  });
+}
+
 async function dfOpenInfoModal() {
   dfHideOtherModals();
   try {
@@ -90,6 +204,7 @@ async function dfOpenInfoModal() {
     dfSetText('dfAppVersion', `v${s.version}`);
     const inp = document.getElementById('dfUploadsRootDir');
     if (inp) inp.value = s.uploadsRootDir || '';
+    await dfInjectDomainProfileSwitcher(s.domainProfile || 'navale');
   } catch (e) {
     console.warn('dfLoadSettings failed:', e);
     dfSetText('dfAppVersion', '—');
@@ -285,7 +400,7 @@ function dfInjectImportModal() {
 
   modalEl.addEventListener('hidden.bs.modal', () => {
     if (!_dfImportConfirmed && _dfImportTempFile) {
-      fetch('/cancel-df-import', {
+      dfFetch('/cancel-df-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tempFile: _dfImportTempFile }),
@@ -313,7 +428,7 @@ function dfInjectImportModal() {
     formData.append('confirmedData', JSON.stringify(confirmedData));
 
     try {
-      const res = await fetch('/import-df', { method: 'POST', body: formData });
+      const res = await dfFetch('/import-df', { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || dfT('manage.import.error'));
       _dfImportConfirmed = true;
@@ -346,7 +461,7 @@ async function dfHandleImportFile(file, { onSuccess, showError } = {}) {
   formData.append('dfFile', file);
 
   try {
-    const res = await fetch('/preview-df', { method: 'POST', body: formData });
+    const res = await dfFetch('/preview-df', { method: 'POST', body: formData });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || dfT('manage.import.error'));
 
@@ -417,7 +532,9 @@ function dfWireNativeDrop({ onFiles, onDragState } = {}) {
       const files = [];
       for (const path of (ev.paths || [])) {
         try {
-          const res = await fetch('/local-file?path=' + encodeURIComponent(path));
+          const res = await fetch('/local-file?path=' + encodeURIComponent(path), {
+            headers: { 'X-Portale-Client': window.__dfAppToken || '' },
+          });
           if (!res.ok) { console.error('Lettura file droppato fallita:', path, res.status); continue; }
           const blob = await res.blob();
           const name = String(path).split(/[\\/]/).pop() || 'file';
@@ -524,4 +641,8 @@ function dfWireInfoButtons() {
 }
 
 document.addEventListener('DOMContentLoaded', dfWireInfoButtons);
+document.addEventListener('DOMContentLoaded', dfApplyDomainLabels);
 window.addEventListener('df:langchange', dfUpdateLangSwitcherActive);
+// Il cambio lingua ri-applica data-i18n (che sovrascriverebbe le etichette di
+// dominio già impostate): ri-applichiamo il profilo di dominio subito dopo.
+window.addEventListener('df:langchange', dfApplyDomainLabels);

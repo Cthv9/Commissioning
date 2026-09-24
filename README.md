@@ -26,6 +26,26 @@ App desktop Windows per la registrazione e gestione dei record di commissioning 
 | Export | **jsPDF** + **jsPDF AutoTable** (bundle locale) |
 | Dati | Excel (`.xlsx`) + backup JSONL |
 
+## Profili di dominio
+
+Il tool supporta due profili di dominio configurabili dal pannello impostazioni dell'app (icona ℹ️): **Navale** e **Industriale**. Il profilo determina la terminologia mostrata in UI (es. "Cantiere" → "Costruttore", "Nome Barca" → "Nome Macchina", "Numero Scafo" → "Modello Motore") e l'elenco di valori disponibili per il campo "Tipo", ma il formato dati sottostante (colonne dell'Excel, struttura dei record e dei metadati audit) resta identico tra i due profili, per garantire piena compatibilità dei dati esistenti.
+
+Il profilo Industriale riunisce in questo stesso tool le funzionalità già offerte dal repository gemello `commissioning_ind`, che viene deprecato a favore del portale unificato.
+
+### Migrazione da Commissioning_IND
+
+Per migrare da un'installazione esistente di `commissioning_ind` al Portale Commissioning unificato:
+
+1. Aprire il pannello impostazioni dell'app e impostare il profilo di dominio su **Industriale**.
+2. Puntare la cartella dati/share di rete allo stesso percorso già in uso da `commissioning_ind`, così che l'Excel dei record industriali continui a essere letto/scritto nello stesso posto.
+3. Eseguire lo script di migrazione per copiare i backup locali esistenti:
+
+   ```bash
+   node scripts/migrate-ind-to-unified.js --from <cartella-backup-IND>
+   ```
+
+   Lo script è **idempotente** (può essere eseguito più volte senza effetti duplicati) e **non modifica il file Excel**: agisce solo sui backup locali (snapshot JSON, metadati audit, copie storiche), lasciando l'Excel condiviso come unica fonte "master" già in uso.
+
 ## Prerequisiti di sviluppo
 
 - [Node.js](https://nodejs.org/) 18+
