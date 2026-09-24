@@ -15,4 +15,5 @@
 - [ ] Valutare redesign con token dedicato per l'endpoint `/local-file` (oggi mitigato dal guard anti-CSRF-locale condiviso)
 - [ ] Rendere bloccante lo step `npm audit` in CI una volta verificato il rumore di falsi positivi
 - [x] Rigenerare `package-lock.json` e ripristinare `npm ci` nel workflow CI
+- Nota manutenzione: gli upgrade di **minor** Tauri vanno fatti a mano, allineando nello stesso commit `@tauri-apps/api` + `@tauri-apps/cli` (npm) e il crate `tauri` (`cargo update -p tauri`): Dependabot è configurato per non proporli, perché li proporrebbe separati e la build fallirebbe
 - [ ] Verificare su una macchina Windows reale che i due installer (Navale/Industriale) prodotti dalla CI si comportino correttamente: nome prodotto/identifier distinti, `PORTALE_DOMAIN_PROFILE` effettivamente "cotto" nel binario (controllare le etichette UI all'avvio senza alcuna variabile d'ambiente impostata manualmente), e che possano coesistere sulla stessa macchina se mai installati entrambi per test
