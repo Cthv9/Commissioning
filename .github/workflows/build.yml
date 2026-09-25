@@ -4,6 +4,10 @@ on:
   push:
     branches: [main, master]
     tags: ['v*']
+  # Build anche sulle PR verso main (incluse quelle di Dependabot), così una PR
+  # si vede verde/rossa PRIMA del merge. La Release resta solo sui tag v*.
+  pull_request:
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -50,18 +54,10 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: Install dependencies
-        # NB: usiamo "npm install" (non "npm ci") perché package-lock.json non è stato
-        # rigenerato in questa PR: l'ambiente di sviluppo usato per questo intervento
-        # non aveva accesso di rete a cdn.sheetjs.com (nuova fonte della dipendenza xlsx),
-        # quindi il lockfile committato è ancora quello con la vecchia risoluzione xlsx/pkg.
-        # "npm install" risolve comunque correttamente da qui in avanti. Appena qualcuno
-        # esegue "npm install" con rete completa e committa il lockfile aggiornato, si può
-        # ripristinare "npm ci" per build più rigorose/riproducibili.
-        run: npm install
+        run: npm ci
 
       - name: Audit dependencies
         run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
 
       - name: Install pkg globally
         run: npm install -g @yao-pkg/pkg
@@ -92,7 +88,8 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: portale-commissioning-${{ matrix.profile }}-${{ github.ref_name }}
+          # Su una PR github.ref_name vale "<n>/merge": lo "/" non è ammesso nei nomi artifact.
+          name: portale-commissioning-${{ matrix.profile }}-${{ github.event_name == 'pull_request' && format('pr{0}', github.event.number) || github.ref_name }}
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
 

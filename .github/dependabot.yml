@@ -1,10 +1,41 @@
 version: 2
 updates:
+  # Una sola PR raggruppata per ecosystem (npm, cargo) invece di una PR per pacchetto.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      npm-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    ignore:
+      # multer 2.x è un breaking change che richiede un test manuale dell'upload
+      # allegati (follow-up tracciato in TODO.md): non proporlo in automatico.
+      - dependency-name: "multer"
+        update-types: ["version-update:semver-major"]
+      # Tauri rifiuta di buildare se @tauri-apps/api (npm) e il crate `tauri`
+      # (cargo) non sono sulla stessa major.minor: npm e cargo sono ecosystem
+      # separati, quindi una minor bumpata da un lato solo rompe sempre la build.
+      # Le patch restano automatiche; le minor si fanno a mano, entrambi i lati insieme.
+      - dependency-name: "@tauri-apps/*"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+
   - package-ecosystem: "cargo"
     directory: "/src-tauri"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      cargo-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+      cargo-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    ignore:
+      # Vedi nota su @tauri-apps/* nel blocco npm.
+      - dependency-name: "tauri"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
