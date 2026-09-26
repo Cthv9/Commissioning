@@ -196,6 +196,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="i18n.js"></script>
+  <!-- Prima dello script inline, che usa dfWirePageDfDrop/dfFetch già al caricamento. -->
+  <script src="ui-common.js"></script>
 
   <script>
     function dfT(key, params) {
@@ -448,7 +450,7 @@
 
     async function openFolder(id) {
       try {
-        const res = await fetch(`/records/${id}/open-folder`, { method: 'POST' });
+        const res = await window.dfFetch(`/records/${id}/open-folder`, { method: 'POST' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) { alert(data.error || dfT('manage.error.folder')); return; }
         if (data.folderExists === false) { showHistoricalNotice(); }
@@ -520,7 +522,7 @@ function openEdit(id) {
       };
 
       try {
-        const res = await fetch(`/records/${currentEditId}`, {
+        const res = await window.dfFetch(`/records/${currentEditId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -560,7 +562,7 @@ function openEdit(id) {
       if (!ok) return;
 
       try {
-        const res = await fetch(`/records/${id}`, { method: 'DELETE' });
+        const res = await window.dfFetch(`/records/${id}`, { method: 'DELETE' });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           alert(data.error || dfT('manage.error.delete', { status: res.status }));
@@ -799,7 +801,7 @@ function openEdit(id) {
         const modal = bootstrap.Modal.getInstance(document.getElementById('historicalNoticeModal'));
         if (modal) modal.hide();
         try {
-          const res = await fetch('/open-root', { method: 'POST' });
+          const res = await window.dfFetch('/open-root', { method: 'POST' });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
             alert(data.error || dfT('manage.error.folder'));
@@ -813,7 +815,6 @@ function openEdit(id) {
     // Avvio
     loadRecords();
   </script>
-  <script src="ui-common.js"></script>
 
 <!-- Notice record storico -->
 <div class="modal fade" id="historicalNoticeModal" tabindex="-1" aria-hidden="true">

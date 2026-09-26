@@ -4,6 +4,9 @@
 # Output build Tauri (sidecar compilato + file frontend copiati)
 /server-dist
 
+# Pacchetti MSIX generati da scripts/build-msix.ps1
+/msix-out
+
 # Artefatti build Rust/Tauri
 /src-tauri/target
 /src-tauri/dist

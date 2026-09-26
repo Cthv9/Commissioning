@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
  * Migra i file di backup del vecchio portale "industriale" (repo gemello)
- * nella cartella di backup del profilo industriale unificato.
+ * nella cartella di backup del portale unificato.
  *
  * Uso:
- *   node scripts/migrate-ind-to-unified.js --from <cartellaBackupIND> [--force] [--excel <path>]
+ *   node scripts/migrate-ind-to-unified.js --from <cartellaBackupIND> [--to <cartellaBackup>] [--force] [--excel <path>]
  *
  * Senza --from, prova come default: ~/PortaleCommissioningIND_Backup
+ * Senza --to, usa la cartella dell'app: ~/Documents/Portale Commissioning/backup
+ * (con Documenti spostati su OneDrive indicare il percorso reale con --to).
  *
  * Copia (mai sovrascrive, a meno di --force) i file esistenti tra:
  *   records_latest.json, meta.json, records.jsonl, tombstones.jsonl
- * dalla cartella --from alla cartella di backup del profilo industriale
- * (defaultBackupDirName in domain-profile.js, risolta rispetto a os.homedir()).
  *
  * Non modifica mai la cartella di origine, lo share di rete o l'Excel originale.
  */
@@ -23,11 +23,13 @@ const { getProfile, BASE_EXCEL_HEADERS } = require('../domain-profile');
 const FILES_TO_MIGRATE = ['records_latest.json', 'meta.json', 'records.jsonl', 'tombstones.jsonl'];
 
 function parseArgs(argv) {
-  const args = { from: null, force: false, excel: null };
+  const args = { from: null, to: null, force: false, excel: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--from') {
       args.from = argv[++i] || null;
+    } else if (a === '--to') {
+      args.to = argv[++i] || null;
     } else if (a === '--force') {
       args.force = true;
     } else if (a === '--excel') {
@@ -98,7 +100,9 @@ function main() {
   }
 
   const indProfile = getProfile('industriale');
-  const destDir = path.join(os.homedir(), indProfile.defaultBackupDirName);
+  const destDir = args.to
+    ? path.resolve(args.to)
+    : path.join(os.homedir(), 'Documents', 'Portale Commissioning', 'backup');
   fs.mkdirSync(destDir, { recursive: true });
 
   console.log(`Origine:      ${fromDir}`);

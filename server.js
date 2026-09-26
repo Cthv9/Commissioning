@@ -7,7 +7,8 @@ const crypto = require('crypto');
 const { execFile, spawn } = require('child_process');
 const xlsx = require('xlsx');
 const AdmZip = require('adm-zip');
-const { getProfile, listProfileIds } = require('./domain-profile');
+const { PROFILES, getProfile, normalizeProfileId, resolveDomainProfileId } = require('./domain-profile');
+const { migrateLegacyBackupDir } = require('./backup-migration');
 const { safeJsonParse } = require('./safe-json');
 
 // Token in-memory generato una sola volta all'avvio del processo: serve a
@@ -25,12 +26,21 @@ const excelRootDir = process.env.PORTALE_ROOT_DIR || '';
 const defaultUploadsRootDir = process.env.PORTALE_UPLOADS_DIR || excelRootDir;
 
 /**
- * Backup locale (writable) - per default usa una cartella in home utente.
- * Quando l'app gira in Electron, electron-main.js passa PORTALE_BACKUP_DIR in AppData.
+ * Backup locale (writable). Nell'app desktop main.rs passa PORTALE_BACKUP_DIR
+ * nei Documenti dell'utente: nel pacchetto MSIX la cartella AppData viene
+ * cancellata alla disinstallazione, e con essa l'audit trail (meta.json).
  */
 const backupDir =
   process.env.PORTALE_BACKUP_DIR ||
   path.join(os.homedir(), 'PortaleCommissioningBackup');
+
+try {
+  if (migrateLegacyBackupDir(process.env.PORTALE_LEGACY_BACKUP_DIR, backupDir)) {
+    console.log(`Backup migrati da ${process.env.PORTALE_LEGACY_BACKUP_DIR} a ${backupDir}`);
+  }
+} catch (e) {
+  console.error('Migrazione backup non riuscita:', e.message);
+}
 
 const backupFiles = {
   jsonl: path.join(backupDir, 'records.jsonl'),
@@ -94,30 +104,29 @@ function getUploadsRootDir() {
   return s.uploadsRootDir || defaultUploadsRootDir;
 }
 
-/**
- * Il profilo di dominio (Navale/Industriale) è deciso a BUILD-TIME, non a
- * runtime: nell'app desktop, il wrapper Tauri (main.rs) lo "cuoce" nel
- * binario con option_env! e lo passa a questo processo come env var quando
- * lo avvia — non è mai esposto/modificabile dall'app in esecuzione (nessun
- * selettore in UI), per evitare che un utente non esperto lo cambi per
- * errore mentre l'app è in uso. Se assente (es. `node server.js` in dev),
- * il default è "navale".
- */
-function getDomainProfileId() {
-  const raw = String(process.env.PORTALE_DOMAIN_PROFILE || 'navale').trim().toLowerCase();
-  return listProfileIds().includes(raw) ? raw : 'navale';
+// Profilo scelto una volta al primo avvio (o preimpostato dall'IT via env) e
+// poi non più modificabile dall'app: cambiarlo cambierebbe il file Excel usato.
+function getDomainProfileResolution() {
+  return resolveDomainProfileId({
+    envValue: process.env.PORTALE_DOMAIN_PROFILE,
+    settingsValue: loadSettings().domainProfile,
+  });
 }
 
 function getActiveProfile() {
-  return getProfile(getDomainProfileId());
+  const { id } = getDomainProfileResolution();
+  return id ? getProfile(id) : null;
 }
 
+// null finché il profilo non è scelto: nessun Excel viene letto o scritto prima.
 function getExcelPath() {
-  return path.join(getUploadsRootDir(), getActiveProfile().defaultExcelFileName);
+  const profile = getActiveProfile();
+  return profile ? path.join(getUploadsRootDir(), profile.defaultExcelFileName) : null;
 }
 
 function getExcelBaseName() {
-  return path.basename(getActiveProfile().defaultExcelFileName, '.xlsx');
+  const profile = getActiveProfile();
+  return profile ? path.basename(profile.defaultExcelFileName, '.xlsx') : null;
 }
 
 function escapeRegExp(s) {
@@ -174,8 +183,9 @@ function cleanupBackupArtifacts() {
     // 3) Retention dei backup Excel: tieni gli ultimi N file (configurabile), cancella il resto
     // TODO: implementare anche la pulizia periodica basata su settings.auditRetentionMonths (audit trail / meta.json).
     const excelDir = path.join(backupDir, 'excel');
-    if (fs.existsSync(excelDir)) {
-      const excelBaseNameRe = new RegExp(`^${escapeRegExp(getExcelBaseName())}_.*\\.xlsx$`, 'i');
+    const excelBaseName = getExcelBaseName();
+    if (excelBaseName && fs.existsSync(excelDir)) {
+      const excelBaseNameRe = new RegExp(`^${escapeRegExp(excelBaseName)}_.*\\.xlsx$`, 'i');
       const files = fs.readdirSync(excelDir)
         .filter(f => excelBaseNameRe.test(f))
         .map(f => ({ f, p: path.join(excelDir, f), m: fs.statSync(path.join(excelDir, f)).mtimeMs }))
@@ -268,8 +278,8 @@ function readSnapshot() {
 
 function readExcel() {
   const excelPath = getExcelPath();
-  // Se l'Excel manca, ripiega sul backup snapshot (così la UI rimane funzionante).
-  if (!fs.existsSync(excelPath)) {
+  // Se l'Excel manca (o il profilo non è ancora scelto), ripiega sul backup snapshot.
+  if (!excelPath || !fs.existsSync(excelPath)) {
     return readSnapshot();
   }
   try {
@@ -289,6 +299,7 @@ function readExcel() {
 
 function writeExcel(baseRecords) {
   const excelPath = getExcelPath();
+  if (!excelPath) throw new Error('Profilo di dominio non ancora scelto.');
   const workbook = xlsx.utils.book_new();
   const sheet = xlsx.utils.json_to_sheet(baseRecords, { header: BASE_HEADERS });
   xlsx.utils.book_append_sheet(workbook, sheet, 'Matrice');
@@ -333,7 +344,7 @@ function persistBackup(action, recordOrInfo, fullRecords) {
   // Copia Excel per sicurezza (se esiste)
   try {
     const excelPath = getExcelPath();
-    if (fs.existsSync(excelPath)) {
+    if (excelPath && fs.existsSync(excelPath)) {
       ensureDir(backupFiles.excelCopiesDir);
       const stamp = ts.replace(/[:.]/g, '-');
       const dest = path.join(backupFiles.excelCopiesDir, `${getExcelBaseName()}_${stamp}.xlsx`);
@@ -547,20 +558,28 @@ app.get('/settings', (req, res) => {
     excelRootDir: getUploadsRootDir(),
     uploadsRootDir: getUploadsRootDir(),
     backupDir,
-    domainProfile: getDomainProfileId(),
+    domainProfile: getDomainProfileResolution().id,
     maxExcelBackupCopies: Number(s.maxExcelBackupCopies) || 50,
     tmpUploadsRetentionDays: Number(s.tmpUploadsRetentionDays) || 2,
     auditRetentionMonths: Number(s.auditRetentionMonths) || 24,
   });
 });
 
+function publicProfile(p) {
+  return { id: p.id, appTitle: p.appTitle, labels: p.labels, tipoOptions: p.tipoOptions };
+}
+
 /**
- * Profilo di dominio attivo (navale/industriale) — pubblico, usato dalla UI
- * per etichette, opzioni "Tipo" e titolo app.
+ * Profilo di dominio attivo, usato dalla UI per etichette, opzioni "Tipo" e
+ * titolo. Se non è ancora stato scelto restituisce le opzioni per la
+ * schermata di primo avvio.
  */
 app.get('/domain-profile', (req, res) => {
-  const p = getActiveProfile();
-  res.json({ id: p.id, appTitle: p.appTitle, labels: p.labels, tipoOptions: p.tipoOptions });
+  const { id, source } = getDomainProfileResolution();
+  if (!id) {
+    return res.json({ configured: false, options: Object.values(PROFILES).map(publicProfile) });
+  }
+  res.json({ configured: true, source, ...publicProfile(getProfile(id)) });
 });
 
 /**
@@ -585,6 +604,27 @@ function requireAppOrigin(req, res, next) {
   }
   next();
 }
+
+// Nessuna scrittura di record/Excel prima della scelta del profilo: il nome
+// del file Excel dipende dal profilo.
+function requireDomainProfile(req, res, next) {
+  if (!getDomainProfileResolution().id) {
+    return res.status(409).json({ error: 'Profilo di dominio non ancora scelto.' });
+  }
+  next();
+}
+
+// Scelta una tantum al primo avvio: una volta impostato il profilo non si
+// cambia più dall'app (reset solo da IT, vedi README).
+app.post('/settings/domain-profile', requireAppOrigin, (req, res) => {
+  if (getDomainProfileResolution().id) {
+    return res.status(409).json({ error: 'Il profilo di dominio è già stato scelto.' });
+  }
+  const id = normalizeProfileId(req.body && req.body.domainProfile);
+  if (!id) return res.status(400).json({ error: 'Profilo di dominio non valido.' });
+  saveSettings({ domainProfile: id });
+  res.json({ configured: true, source: 'settings', ...publicProfile(getProfile(id)) });
+});
 
 app.post('/settings/uploads-root', requireAppOrigin, (req, res) => {
   const dir = (req.body && req.body.uploadsRootDir) ? String(req.body.uploadsRootDir).trim() : '';
@@ -641,7 +681,7 @@ app.get('/records', (req, res) => {
 /**
  * Upload + inserimento record Excel + backup
  */
-app.post('/upload', upload.array('files[]'), (req, res) => {
+app.post('/upload', requireAppOrigin, requireDomainProfile, upload.array('files[]'), (req, res) => {
   const { cantiere, nomeBarca, numeroScafo, matricola, tipo, operatore } = req.body;
 
   const dataWithMeta = readExcel();
@@ -700,7 +740,7 @@ app.post('/upload', upload.array('files[]'), (req, res) => {
 /**
  * Update record + eventuale rename cartella + backup
  */
-app.put('/records/:id', requireAppOrigin, (req, res) => {
+app.put('/records/:id', requireAppOrigin, requireDomainProfile, (req, res) => {
   const dataWithMeta = readExcel();
   const baseRecords = dataWithMeta.map(r => {
     const out = {};
@@ -773,7 +813,7 @@ app.put('/records/:id', requireAppOrigin, (req, res) => {
 /**
  * Delete record + elimina cartella + backup
  */
-app.delete('/records/:id', requireAppOrigin, (req, res) => {
+app.delete('/records/:id', requireAppOrigin, requireDomainProfile, (req, res) => {
   const dataWithMeta = readExcel();
   const baseRecords = dataWithMeta.map(r => {
     const out = {};
@@ -883,7 +923,7 @@ app.post('/open-root', requireAppOrigin, (req, res) => {
  * ATTENZIONE: sovrascrive Barche_Commissionate.xlsx
  */
 let rebuildingExcel = false;
-app.post('/admin/rebuild-excel', requireAppOrigin, (req, res) => {
+app.post('/admin/rebuild-excel', requireAppOrigin, requireDomainProfile, (req, res) => {
   if (rebuildingExcel) {
     return res.status(409).json({ error: 'Ricostruzione già in corso, attendere.' });
   }
@@ -931,7 +971,7 @@ const dfUpload = multer({
   },
 });
 
-app.post('/preview-df', requireAppOrigin, dfUpload.single('dfFile'), (req, res) => {
+app.post('/preview-df', requireAppOrigin, requireDomainProfile, dfUpload.single('dfFile'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nessun file .df ricevuto.' });
   const dfPath = req.file.path;
   try {
@@ -998,7 +1038,7 @@ app.post('/cancel-df-import', requireAppOrigin, express.json(), (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/import-df', requireAppOrigin, dfUpload.single('dfFile'), (req, res) => {
+app.post('/import-df', requireAppOrigin, requireDomainProfile, dfUpload.single('dfFile'), (req, res) => {
   let dfPath;
 
   if (req.body && req.body.tempFile) {

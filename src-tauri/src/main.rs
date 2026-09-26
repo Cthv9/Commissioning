@@ -8,17 +8,6 @@ use tauri_plugin_dialog::DialogExt;
 // Handle al processo server per terminarlo alla chiusura (solo produzione)
 struct ServerProcess(Mutex<Option<std::process::Child>>);
 
-// Profilo di dominio (Navale/Industriale) deciso a BUILD-TIME, non a runtime:
-// la variabile d'ambiente PORTALE_DOMAIN_PROFILE deve essere impostata PRIMA
-// della compilazione (tipicamente da un job/matrix CI diverso per ciascun
-// installer). Il valore viene "cotto" nel binario da option_env! e non è mai
-// esposto né modificabile dall'app in esecuzione (nessun selettore in UI):
-// evita che un utente non esperto cambi profilo per errore a runtime.
-const DOMAIN_PROFILE: &str = match option_env!("PORTALE_DOMAIN_PROFILE") {
-    Some(v) => v,
-    None => "navale",
-};
-
 #[tauri::command]
 fn select_directory(app: AppHandle) -> Option<String> {
     app.dialog()
@@ -64,15 +53,23 @@ fn main() {
             // In DEV: il server è già avviato da beforeDevCommand (node server.js)
             #[cfg(not(dev))]
             {
+                // Backup nei Documenti: nel pacchetto MSIX (Microsoft Store) AppData
+                // viene cancellata alla disinstallazione, audit trail compreso.
+                // Il server copia una tantum i backup dalla vecchia cartella AppData.
                 let appdata = std::env::var("APPDATA").unwrap_or_default();
-                let backup_dir = format!("{}\\Portale Commissioning\\backup", appdata);
+                let legacy_backup_dir = format!("{}\\Portale Commissioning\\backup", appdata);
+                let backup_dir = app
+                    .path()
+                    .document_dir()
+                    .map(|d| d.join("Portale Commissioning").join("backup").to_string_lossy().into_owned())
+                    .unwrap_or_else(|_| legacy_backup_dir.clone());
 
                 match app.path().resource_dir() {
                     Ok(resource_dir) => {
                         let server_path = resource_dir.join("server.exe");
                         let mut cmd = std::process::Command::new(&server_path);
                         cmd.env("PORTALE_BACKUP_DIR", &backup_dir);
-                        cmd.env("PORTALE_DOMAIN_PROFILE", DOMAIN_PROFILE);
+                        cmd.env("PORTALE_LEGACY_BACKUP_DIR", &legacy_backup_dir);
                         #[cfg(target_os = "windows")]
                         {
                             use std::os::windows::process::CommandExt;

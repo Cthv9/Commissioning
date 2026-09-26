@@ -45,7 +45,8 @@ Base giuridica: **legittimo interesse del Titolare** ex art. 6.1.f GDPR alla tra
 
 - L'elaborazione avviene **localmente sul PC dell'operatore**: il backend Express è vincolato all'indirizzo di loopback (`127.0.0.1`, porta 3000) e non è raggiungibile da altri host della rete.
 - I dati "master" (file Excel e allegati) risiedono su una **share di rete aziendale interna**, con percorso configurabile dall'Azienda tramite il pannello impostazioni dell'app.
-- Un backup locale (JSON/JSONL, snapshot, copie Excel rotanti) viene mantenuto sul PC dell'operatore, di norma in una cartella nel profilo utente Windows.
+- Un backup locale (JSON/JSONL, snapshot, copie Excel rotanti, metadati audit) viene mantenuto sul PC dell'operatore nella cartella `Documenti\Portale Commissioning\backup`. Se l'Azienda ha attivato su OneDrive lo spostamento automatico delle cartelle note (Known Folder Move), questa cartella viene sincronizzata sul tenant Microsoft 365 aziendale: il trattamento resta nel perimetro dei servizi già contrattualizzati dall'Azienda, ma va considerato nel registro dei trattamenti aziendale.
+- L'app è distribuita tramite il **Microsoft Store** (pacchetto MSIX) con visibilità limitata a un pubblico privato di account aziendali. Lo Store gestisce installazione e aggiornamenti; non riceve i dati applicativi. Partner Center richiede un URL di informativa privacy per la scheda dell'app: può essere indicato questo documento.
 - **Non vi è alcun invio di dati a servizi cloud o a terze parti esterne all'Azienda**: il software non effettua chiamate di rete verso l'esterno per il trattamento dei dati applicativi.
 
 ## 6. Conservazione e retention
@@ -68,7 +69,7 @@ Il server Express è avviato con `app.listen(3000, '127.0.0.1', ...)`: accetta c
 
 ### 7.2 Protezione anti-CSRF-locale sugli endpoint che modificano/eliminano dati
 
-Gli endpoint che modificano o eliminano dati (incluse le impostazioni e l'endpoint di lettura file locale usato dal drag&drop) sono protetti da un middleware (`requireAppOrigin`) che richiede l'header `X-Portale-Client` con un token (`APP_TOKEN`) generato all'avvio del processo e recuperabile solo tramite `GET /app-token` dalla stessa applicazione. Non si tratta di un'autenticazione utente forte, ma di una misura che impedisce a una pagina web esterna eventualmente aperta nello stesso browser di invocare queste route in modo silenzioso (protezione da CSRF locale).
+Gli endpoint che creano, modificano o eliminano dati (incluso il caricamento di nuovi record e allegati, `POST /upload`, oltre alle impostazioni e all'endpoint di lettura file locale usato dal drag&drop) sono protetti da un middleware (`requireAppOrigin`) che richiede l'header `X-Portale-Client` con un token (`APP_TOKEN`) generato all'avvio del processo e recuperabile solo tramite `GET /app-token` dalla stessa applicazione. Non si tratta di un'autenticazione utente forte, ma di una misura che impedisce a una pagina web esterna eventualmente aperta nello stesso browser di invocare queste route in modo silenzioso (protezione da CSRF locale).
 
 ### 7.3 Libreria di elaborazione Excel aggiornata
 
@@ -105,6 +106,7 @@ Gli interessati (gli operatori i cui username compaiono negli audit trail) posso
 | Versione | Data | Descrizione |
 |---|---|---|
 | 1.0 | 2026-09-24 | Prima redazione, contestuale al consolidamento navale/industriale |
+| 1.1 | 2026-09-26 | Backup locali spostati nei Documenti; distribuzione tramite Microsoft Store (MSIX, pubblico privato); token anti-CSRF-locale esteso a `POST /upload` |
 
 ---
 

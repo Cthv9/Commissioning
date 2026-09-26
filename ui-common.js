@@ -8,22 +8,27 @@ function dfT(key, params) {
 // ── Token anti-CSRF "locale" (vedi GET /app-token e middleware
 // requireAppOrigin lato server) + wrapper fetch che lo inietta su ogni
 // richiesta non-GET verso il backend. ──────────────────────────────────────
-if (typeof window !== 'undefined') {
-  fetch('/app-token')
-    .then(r => r.json())
-    .then(({ token }) => { window.__dfAppToken = token; })
-    .catch(err => console.warn('Impossibile recuperare /app-token:', err));
+const dfAppTokenPromise = fetch('/app-token')
+  .then(r => r.json())
+  .then(({ token }) => token || '')
+  .catch(err => { console.warn('Impossibile recuperare /app-token:', err); return ''; });
+
+// Promise: chi invia una richiesta subito dopo il caricamento aspetta il token.
+function dfGetAppToken() {
+  return dfAppTokenPromise;
 }
 
-function dfFetch(url, options = {}) {
+async function dfFetch(url, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   if (method === 'GET') return fetch(url, options);
+  const token = await dfGetAppToken();
   return fetch(url, {
     ...options,
-    headers: { 'X-Portale-Client': window.__dfAppToken || '', ...(options.headers || {}) },
+    headers: { 'X-Portale-Client': token, ...(options.headers || {}) },
   });
 }
 
+window.dfGetAppToken = dfGetAppToken;
 window.dfFetch = dfFetch;
 
 // ── Etichette di dominio (navale/industriale): applica a runtime le
@@ -38,7 +43,12 @@ async function dfApplyDomainLabels() {
     console.warn('Impossibile recuperare /domain-profile:', err);
     return;
   }
-  if (!profile || !profile.labels) return;
+  if (!profile) return;
+  if (profile.configured === false) {
+    dfShowDomainProfileWizard(profile.options || []);
+    return;
+  }
+  if (!profile.labels) return;
 
   document.querySelectorAll('[data-df-label]').forEach(el => {
     const key = el.getAttribute('data-df-label');
@@ -63,6 +73,106 @@ async function dfApplyDomainLabels() {
 }
 
 window.dfApplyDomainLabels = dfApplyDomainLabels;
+
+// Schermata di primo avvio: scelta del reparto (una volta sola, poi bloccata).
+function dfShowDomainProfileWizard(options) {
+  if (document.getElementById('dfProfileWizard')) return;
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="modal fade" id="dfProfileWizard" tabindex="-1" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" data-i18n="wizard.title">Configurazione iniziale</h5>
+          </div>
+          <div class="modal-body">
+            <div id="dfProfileWizardChoose">
+              <p data-i18n="wizard.intro"></p>
+              <div class="row g-3" id="dfProfileWizardOptions"></div>
+            </div>
+            <div id="dfProfileWizardConfirm" class="d-none">
+              <p id="dfProfileWizardConfirmText" class="mb-3"></p>
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" id="dfProfileWizardBack" data-i18n="wizard.back">Indietro</button>
+                <button type="button" class="btn btn-primary" id="dfProfileWizardOk" data-i18n="wizard.confirm">Conferma</button>
+              </div>
+            </div>
+            <div class="alert alert-danger d-none mt-3" id="dfProfileWizardError"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  const modalEl = wrap.firstElementChild;
+  document.body.appendChild(modalEl);
+  if (window.DF_I18N) window.DF_I18N.applyTranslations(modalEl);
+
+  const chooseEl = modalEl.querySelector('#dfProfileWizardChoose');
+  const confirmEl = modalEl.querySelector('#dfProfileWizardConfirm');
+  const confirmText = modalEl.querySelector('#dfProfileWizardConfirmText');
+  const errorEl = modalEl.querySelector('#dfProfileWizardError');
+  const okBtn = modalEl.querySelector('#dfProfileWizardOk');
+  let selected = null;
+
+  const optionsEl = modalEl.querySelector('#dfProfileWizardOptions');
+  options.forEach(opt => {
+    const col = document.createElement('div');
+    col.className = 'col-md-6';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline-primary w-100 h-100 p-3 text-start';
+    const title = document.createElement('div');
+    title.className = 'fw-bold mb-1';
+    title.textContent = opt.appTitle;
+    const fields = document.createElement('div');
+    fields.className = 'small text-muted';
+    const l = opt.labels || {};
+    fields.textContent = dfT('wizard.fields', { fields: [l.entita, l.asset, l.identificativo].filter(Boolean).join(' · ') });
+    btn.append(title, fields);
+    btn.addEventListener('click', () => {
+      selected = opt;
+      errorEl.classList.add('d-none');
+      confirmText.textContent = dfT('wizard.confirm.text', { profile: opt.appTitle });
+      chooseEl.classList.add('d-none');
+      confirmEl.classList.remove('d-none');
+    });
+    col.appendChild(btn);
+    optionsEl.appendChild(col);
+  });
+
+  modalEl.querySelector('#dfProfileWizardBack').addEventListener('click', () => {
+    selected = null;
+    confirmEl.classList.add('d-none');
+    chooseEl.classList.remove('d-none');
+  });
+
+  okBtn.addEventListener('click', async () => {
+    if (!selected) return;
+    okBtn.disabled = true;
+    try {
+      const res = await dfFetch('/settings/domain-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domainProfile: selected.id }),
+      });
+      // 409 = già scelto (es. da un'altra finestra): ricaricare mostra lo stato reale.
+      if (res.ok || res.status === 409) {
+        location.reload();
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || dfT('wizard.error'));
+    } catch (e) {
+      errorEl.textContent = e.message || dfT('wizard.error');
+      errorEl.classList.remove('d-none');
+      okBtn.disabled = false;
+    }
+  });
+
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
 
 function dfHideOtherModals() {
   try {
@@ -477,7 +587,7 @@ function dfWireNativeDrop({ onFiles, onDragState } = {}) {
       for (const path of (ev.paths || [])) {
         try {
           const res = await fetch('/local-file?path=' + encodeURIComponent(path), {
-            headers: { 'X-Portale-Client': window.__dfAppToken || '' },
+            headers: { 'X-Portale-Client': await dfGetAppToken() },
           });
           if (!res.ok) { console.error('Lettura file droppato fallita:', path, res.status); continue; }
           const blob = await res.blob();
