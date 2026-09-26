@@ -47,7 +47,8 @@ Base giuridica: **legittimo interesse del Titolare** ex art. 6.1.f GDPR alla tra
 - I dati "master" (file Excel e allegati) risiedono su una **share di rete aziendale interna**, con percorso configurabile dall'Azienda tramite il pannello impostazioni dell'app.
 - Un backup locale (JSON/JSONL, snapshot, copie Excel rotanti, metadati audit) viene mantenuto sul PC dell'operatore nella cartella `Documenti\Portale Commissioning\backup`. Se l'Azienda ha attivato su OneDrive lo spostamento automatico delle cartelle note (Known Folder Move), questa cartella viene sincronizzata sul tenant Microsoft 365 aziendale: il trattamento resta nel perimetro dei servizi già contrattualizzati dall'Azienda, ma va considerato nel registro dei trattamenti aziendale.
 - L'app è distribuita tramite il **Microsoft Store** (pacchetto MSIX) con visibilità limitata a un pubblico privato di account aziendali. Lo Store gestisce installazione e aggiornamenti; non riceve i dati applicativi. Partner Center richiede un URL di informativa privacy per la scheda dell'app: può essere indicato questo documento.
-- **Non vi è alcun invio di dati a servizi cloud o a terze parti esterne all'Azienda**: il software non effettua chiamate di rete verso l'esterno per il trattamento dei dati applicativi.
+- **Non vi è alcun invio di dati a servizi cloud o a terze parti esterne all'Azienda**: il software non effettua chiamate di rete verso l'esterno per il trattamento dei dati applicativi. Dalla versione 3.6 anche le librerie dell'interfaccia (Bootstrap, JSZip) sono incluse nell'app e nel portale remoto: prima venivano scaricate dal CDN jsDelivr a ogni apertura, e con la richiesta arrivava a terzi l'indirizzo IP dell'utente.
+- Il **portale remoto** per i tecnici (pagina web su GitHub Pages) non invia dati: il pacchetto con dati e allegati viene creato nel browser del tecnico, che lo trasmette all'Azienda con i propri canali (email, chat aziendale). GitHub, come fornitore di hosting della pagina, riceve i normali dati tecnici di accesso (indirizzo IP, browser) secondo la propria informativa.
 
 ## 6. Conservazione e retention
 
@@ -113,6 +114,7 @@ Gli interessati (gli operatori i cui username compaiono negli audit trail) posso
 | 1.0 | 2026-09-24 | Prima redazione, contestuale al consolidamento navale/industriale |
 | 1.1 | 2026-09-26 | Backup locali spostati nei Documenti; distribuzione tramite Microsoft Store (MSIX, pubblico privato); token anti-CSRF-locale esteso a `POST /upload` |
 | 1.2 | 2026-09-26 | Controllo dell'intestazione Host (DNS rebinding); `/local-file` limitato ai file trascinati (rischio residuo chiuso); test automatici delle route e delle pagine in CI |
+| 1.3 | 2026-09-26 | Librerie dell'interfaccia incluse nell'app (nessuna richiesta al CDN jsDelivr); descrizione del portale remoto; Content-Security-Policy |
 
 ---
 

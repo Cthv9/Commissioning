@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Solo risorse di questo sito: niente codice o connessioni verso l'esterno. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'">
   <title>Commissioning | Portale Remoto</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="vendor/bootstrap.min.css" rel="stylesheet">
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -70,89 +72,163 @@ h1 {
 <body>
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="fw-semibold text-secondary">Portale Commissioning</div>
+    <div class="fw-semibold text-secondary" id="appTitle">Portale Commissioning</div>
     <span class="badge bg-warning text-dark">Portale Remoto</span>
   </div>
 
   <h1>Crea pacchetto commissioning</h1>
 
-  <div class="alert alert-info py-2 px-3 mb-3" style="font-size:0.85rem;">
-    Compila il modulo, allega i file e clicca <strong>Genera .df</strong>.<br>
-    Invia il file scaricato al responsabile commissioning.
+  <!-- Scelta del reparto: alla prima apertura, se il link non la indica già (?profilo=...). -->
+  <div id="profileChooser" style="display:none;">
+    <p class="text-center mb-3">Per quale reparto lavori?</p>
+    <div class="d-grid gap-2 mb-2" id="profileOptions"></div>
+    <p class="text-center text-muted mb-0" style="font-size:0.8rem;">La scelta resta memorizzata su questo dispositivo e si può cambiare in fondo alla pagina.</p>
   </div>
 
-  <form id="slaveForm" novalidate>
-    <div class="row g-2 mb-2">
-      <div class="col-7">
-        <label for="cantiere" class="form-label mb-1">Cantiere Costruttore <span class="text-danger">*</span></label>
-        <input type="text" class="form-control form-control-sm" id="cantiere" name="cantiere" autocomplete="off" required>
-      </div>
-      <div class="col-5">
-        <label for="nomeBarca" class="form-label mb-1">Nome Barca <span class="text-danger">*</span></label>
-        <input type="text" class="form-control form-control-sm" id="nomeBarca" name="nomeBarca" required>
-      </div>
+  <div id="portal" style="display:none;">
+    <div class="alert alert-info py-2 px-3 mb-3" style="font-size:0.85rem;">
+      Compila il modulo, allega i file e clicca <strong>Genera .df</strong>.<br>
+      Invia il file scaricato al responsabile commissioning.
     </div>
 
-    <div class="row g-2 mb-2">
-      <div class="col-5">
-        <label for="numeroScafo" class="form-label mb-1">Numero Scafo <span class="text-danger">*</span></label>
-        <input type="text" class="form-control form-control-sm" id="numeroScafo" name="numeroScafo" required>
-      </div>
-      <div class="col-4">
-        <label for="matricola" class="form-label mb-1">Matricola</label>
-        <input type="text" class="form-control form-control-sm" id="matricola" name="matricola">
-      </div>
-      <div class="col-3">
-        <label for="tipo" class="form-label mb-1">Tipo <span class="text-danger">*</span></label>
-        <select class="form-select form-select-sm" id="tipo" name="tipo" required>
-          <option value="Avviamento">Avviamento</option>
-          <option value="Commissioning">Commissioning</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="mb-2">
-      <label for="operatore" class="form-label mb-1">Operatore <span class="text-danger">*</span></label>
-      <input type="text" class="form-control form-control-sm" id="operatore" name="operatore" autocomplete="off" required>
-    </div>
-
-    <div class="mb-2">
-      <label class="form-label mb-1">File allegati</label>
-      <div id="dropZone" role="button" tabindex="0" aria-label="Zona trascinamento file">
-        <input type="file" id="fileInput" multiple>
-        <div id="dropLabel">
-          <div class="mb-1">Trascina i file qui oppure</div>
-          <button type="button" class="btn btn-outline-secondary btn-sm" id="browseBtn">Sfoglia…</button>
+    <form id="slaveForm" novalidate>
+      <div class="row g-2 mb-2">
+        <div class="col-7">
+          <label for="cantiere" class="form-label mb-1"><span data-label="entita">Cantiere</span> <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="cantiere" name="cantiere" autocomplete="off" required>
         </div>
-        <ul class="list-unstyled mb-0 mt-2 text-start" id="fileList"></ul>
+        <div class="col-5">
+          <label for="nomeBarca" class="form-label mb-1"><span data-label="asset">Nome Barca</span> <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="nomeBarca" name="nomeBarca" required>
+        </div>
       </div>
-    </div>
 
-    <div id="alertBox" class="mb-2" style="display:none;"></div>
+      <div class="row g-2 mb-2">
+        <div class="col-5">
+          <label for="numeroScafo" class="form-label mb-1"><span data-label="identificativo">Numero Scafo</span> <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="numeroScafo" name="numeroScafo" required>
+        </div>
+        <div class="col-4">
+          <label for="matricola" class="form-label mb-1"><span data-label="matricola">Matricola</span></label>
+          <input type="text" class="form-control form-control-sm" id="matricola" name="matricola">
+        </div>
+        <div class="col-3">
+          <label for="tipo" class="form-label mb-1"><span data-label="tipo">Tipo</span> <span class="text-danger">*</span></label>
+          <select class="form-select form-select-sm" id="tipo" name="tipo" required></select>
+        </div>
+      </div>
 
-    <div class="row g-2">
-      <div class="col-8">
-        <button type="submit" class="btn btn-primary btn-sm w-100" id="generateBtn">
-          Genera .df
-        </button>
+      <div class="mb-2">
+        <label for="operatore" class="form-label mb-1"><span data-label="operatore">Operatore</span> <span class="text-danger">*</span></label>
+        <input type="text" class="form-control form-control-sm" id="operatore" name="operatore" autocomplete="off" required>
       </div>
-      <div class="col-4">
-        <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="resetBtn">Svuota</button>
+
+      <div class="mb-2">
+        <label class="form-label mb-1">File allegati</label>
+        <div id="dropZone" role="button" tabindex="0" aria-label="Zona trascinamento file">
+          <input type="file" id="fileInput" multiple>
+          <div id="dropLabel">
+            <div class="mb-1">Trascina i file qui, incollali (Ctrl+V) oppure</div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="browseBtn">Sfoglia…</button>
+          </div>
+          <ul class="list-unstyled mb-0 mt-2 text-start" id="fileList"></ul>
+        </div>
       </div>
+
+      <div id="alertBox" class="mb-2" style="display:none;"></div>
+
+      <div class="row g-2">
+        <div class="col-8">
+          <button type="submit" class="btn btn-primary btn-sm w-100" id="generateBtn">
+            Genera .df
+          </button>
+        </div>
+        <div class="col-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="resetBtn">Svuota</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="mt-3 text-center" style="font-size:0.8rem;">
+      <span class="text-muted">Reparto: <strong id="profileName"></strong></span>
+      · <a href="#" id="changeProfile">cambia</a>
     </div>
-  </form>
+  </div>
 
   <div class="mt-4 text-center">
     <small class="text-muted">Made with ❤️ by DF</small>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="profili.js"></script>
 <script>
 (function () {
   'use strict';
 
+  // ── Profilo (Navale / Industriale) ────────────────────────────────────────
+  // Cambia solo etichette e valori del campo Tipo: il pacchetto .df ha lo
+  // stesso formato per entrambi e si importa nell'app di qualunque reparto.
+  const PROFILI = window.DF_PROFILI || {};
+  const PROFILE_NAMES = { navale: 'Navale', industriale: 'Industriale' };
+  const STORAGE_KEY = 'dfPortaleProfilo';
+
+  function readStoredProfile() {
+    try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
+  }
+  function storeProfile(id) {
+    try { localStorage.setItem(STORAGE_KEY, id); } catch {}
+  }
+
+  // Priorità: link con ?profilo=... (es. QR code per reparto), poi la scelta memorizzata.
+  function initialProfile() {
+    const fromUrl = new URLSearchParams(location.search).get('profilo');
+    if (fromUrl && PROFILI[fromUrl]) { storeProfile(fromUrl); return fromUrl; }
+    const stored = readStoredProfile();
+    return stored && PROFILI[stored] ? stored : null;
+  }
+
+  const chooser = document.getElementById('profileChooser');
+  const portal = document.getElementById('portal');
+
+  function applyProfile(id) {
+    const p = PROFILI[id];
+    document.getElementById('appTitle').textContent = p.appTitle;
+    document.getElementById('profileName').textContent = PROFILE_NAMES[id] || id;
+    document.querySelectorAll('[data-label]').forEach((el) => {
+      const text = p.labels[el.getAttribute('data-label')];
+      if (text) el.textContent = text;
+    });
+    const tipo = document.getElementById('tipo');
+    tipo.replaceChildren(...p.tipoOptions.map((v) => new Option(v, v)));
+    chooser.style.display = 'none';
+    portal.style.display = '';
+  }
+
+  function showChooser() {
+    const options = document.getElementById('profileOptions');
+    options.replaceChildren(...Object.keys(PROFILI).map((id) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-primary';
+      btn.textContent = PROFILE_NAMES[id] || id;
+      btn.addEventListener('click', () => { storeProfile(id); applyProfile(id); });
+      return btn;
+    }));
+    portal.style.display = 'none';
+    chooser.style.display = '';
+  }
+
+  document.getElementById('changeProfile').addEventListener('click', (e) => {
+    e.preventDefault();
+    showChooser();
+  });
+
+  const startProfile = initialProfile();
+  if (startProfile) applyProfile(startProfile); else showChooser();
+
+  // ── Modulo e allegati ─────────────────────────────────────────────────────
   const form = document.getElementById('slaveForm');
   const fileInput = document.getElementById('fileInput');
   const fileList = document.getElementById('fileList');
@@ -183,13 +259,26 @@ h1 {
     renderFileList();
   });
 
+  // Prevent browser from navigating when files are dropped outside the zone
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', (e) => e.preventDefault());
+
   // Drag & drop
-  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('dragenter', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', (e) => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over'); });
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.classList.remove('drag-over');
-    addFiles(Array.from(e.dataTransfer.files));
+    const files = [];
+    if (e.dataTransfer.items) {
+      for (const item of e.dataTransfer.items) {
+        if (item.kind === 'file') { const f = item.getAsFile(); if (f) files.push(f); }
+      }
+    }
+    if (files.length === 0) files.push(...Array.from(e.dataTransfer.files));
+    if (files.length > 0) addFiles(files);
   });
 
   browseBtn.addEventListener('click', () => fileInput.click());
@@ -198,6 +287,13 @@ h1 {
   fileInput.addEventListener('change', () => {
     addFiles(Array.from(fileInput.files));
     fileInput.value = '';
+  });
+
+  // Allegati Outlook: il drag diretto non è supportato dai browser Chromium,
+  // ma Ctrl+C sull'allegato + Ctrl+V qui funziona.
+  document.addEventListener('paste', (e) => {
+    const pasted = Array.from((e.clipboardData && e.clipboardData.files) || []);
+    if (pasted.length) { e.preventDefault(); addFiles(pasted); }
   });
 
   function addFiles(files) {
@@ -269,6 +365,7 @@ h1 {
     generateBtn.textContent = 'Creazione in corso…';
 
     try {
+      // Chiavi storiche, uguali per entrambi i profili: sono le colonne dell'Excel.
       const record = {
         Cantiere: cantiere,
         'Nome Barca': nomeBarca,

@@ -1,7 +1,7 @@
 {
   "name": "Portale Commissioning",
   "short_name": "Commissioning",
-  "description": "Crea pacchetti .df di commissioning barche",
+  "description": "Crea pacchetti .df di commissioning da importare nel Portale Commissioning",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

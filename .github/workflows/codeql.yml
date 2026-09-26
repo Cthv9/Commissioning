@@ -1,0 +1,41 @@
+name: CodeQL
+
+# Analisi statica di sicurezza del codice (JavaScript e workflow GitHub
+# Actions): i risultati compaiono in Security > Code scanning.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '23 4 * * 1' # ogni lunedì: nuove regole anche senza modifiche al codice
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          # Librerie di terze parti già minificate: non sono codice nostro.
+          config: |
+            paths-ignore:
+              - '**/*.min.js'
+              - node_modules
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

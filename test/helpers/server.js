@@ -84,4 +84,32 @@ async function startServer(extraEnv = {}) {
   };
 }
 
-module.exports = { startServer, ROOT };
+// Server statico minimo per il portale remoto (docs/), come GitHub Pages.
+async function startStaticServer(dir) {
+  const http = require('node:http');
+  const TYPES = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+  };
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/\/$/, '/index.html');
+    const file = path.join(dir, path.normalize(rel));
+    if (!file.startsWith(dir) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      res.writeHead(404);
+      return res.end();
+    }
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+    fs.createReadStream(file).pipe(res);
+  });
+  const port = await freePort();
+  await new Promise((r) => server.listen(port, '127.0.0.1', r));
+  return {
+    base: `http://127.0.0.1:${port}`,
+    stop: () => new Promise((r) => { server.closeAllConnections(); server.close(r); }),
+  };
+}
+
+module.exports = { startServer, startStaticServer, ROOT };

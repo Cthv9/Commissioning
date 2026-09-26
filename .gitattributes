@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Copie esatte di librerie di terze parti e file generati: nessuna conversione
+# dei fine riga (su Windows diventerebbero CRLF). test/sync-assets.test.js le
+# confronta byte per byte con i pacchetti npm e con domain-profile.js.
+*.min.js -text
+*.min.css -text
+docs/profili.js -text
