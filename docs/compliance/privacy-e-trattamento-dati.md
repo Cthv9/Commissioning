@@ -41,6 +41,12 @@ Le finalità del trattamento sono:
 
 Base giuridica: **legittimo interesse del Titolare** ex art. 6.1.f GDPR alla tracciabilità e alla qualità dei processi interni, e/o **adempimento di obblighi contrattuali/organizzativi interni** (es. procedure di qualità aziendali, rapporti di lavoro) ex art. 6.1.b/c GDPR, secondo quanto stabilito dalle politiche interne dell'Azienda. Non è richiesto il consenso dell'interessato, trattandosi di dati raccolti nell'ambito del rapporto di lavoro per finalità di tracciabilità organizzativa proporzionate.
 
+### 4.1 Uso nel rapporto di lavoro (art. 4 Statuto dei Lavoratori)
+
+L'app è uno **strumento di lavoro** usato dai dipendenti per svolgere la propria attività (art. 4, comma 2, L. 300/1970 come modificato dal D.Lgs. 151/2015): non richiede quindi accordo sindacale né autorizzazione dell'Ispettorato. Gli audit trail (chi ha creato, modificato o eliminato un record e quando) servono alla tracciabilità documentale, non al controllo della prestazione.
+
+Perché i dati raccolti siano utilizzabili anche ai fini del rapporto di lavoro, l'Azienda deve dare ai dipendenti **un'adeguata informazione** sulle modalità d'uso dello strumento e sui dati registrati (art. 4, comma 3), oltre all'informativa privacy (art. 13 GDPR). Un modello pronto è in `documentazione/modelli-privacy.md`. Se l'Azienda intendesse usare gli audit trail per valutare l'attività dei singoli dipendenti, il trattamento cambierebbe natura: andrebbero rivisti informativa, base giuridica e valutazione d'impatto (§ 11).
+
 ## 5. Modalità del trattamento
 
 - L'elaborazione avviene **localmente sul PC dell'operatore**: il backend Express è vincolato all'indirizzo di loopback (`127.0.0.1`, porta 3000) e non è raggiungibile da altri host della rete.
@@ -49,6 +55,12 @@ Base giuridica: **legittimo interesse del Titolare** ex art. 6.1.f GDPR alla tra
 - L'app è distribuita tramite il **Microsoft Store** (pacchetto MSIX) con visibilità limitata a un pubblico privato di account aziendali. Lo Store gestisce installazione e aggiornamenti; non riceve i dati applicativi. Partner Center richiede un URL di informativa privacy per la scheda dell'app: può essere indicato questo documento.
 - **Non vi è alcun invio di dati a servizi cloud o a terze parti esterne all'Azienda**: il software non effettua chiamate di rete verso l'esterno per il trattamento dei dati applicativi. Dalla versione 3.6 anche le librerie dell'interfaccia (Bootstrap, JSZip) sono incluse nell'app e nel portale remoto: prima venivano scaricate dal CDN jsDelivr a ogni apertura, e con la richiesta arrivava a terzi l'indirizzo IP dell'utente.
 - Il **portale remoto** per i tecnici (pagina web su GitHub Pages) non invia dati: il pacchetto con dati e allegati viene creato nel browser del tecnico, che lo trasmette all'Azienda con i propri canali (email, chat aziendale). GitHub, come fornitore di hosting della pagina, riceve i normali dati tecnici di accesso (indirizzo IP, browser) secondo la propria informativa.
+
+### 5.1 Cookie e archiviazione locale
+
+- **App desktop**: non usa cookie né strumenti di tracciamento. Salva sul PC, nella memoria locale della finestra, solo la lingua scelta e i valori già usati nei campi (per suggerirli durante la compilazione).
+- **Portale remoto** (GitHub Pages): non usa cookie. Salva nel browser (`localStorage`) solo il reparto scelto (Navale/Industriale) per non chiederlo a ogni apertura, e una copia dei file della pagina per funzionare offline. Sono strumenti tecnici necessari al servizio richiesto dall'utente: non serve consenso né banner cookie (art. 122 D.Lgs. 196/2003; Linee guida del Garante su cookie e altri strumenti di tracciamento, 10 giugno 2021).
+- Nessuno strumento di analisi o profilazione (analytics, pixel, font o librerie da siti terzi) è presente nell'app o nel portale.
 
 ## 6. Conservazione e retention
 
@@ -106,8 +118,26 @@ Gli interessati (gli operatori i cui username compaiono negli audit trail) posso
 
 - Regolamento (UE) 2016/679 (GDPR)
 - D.Lgs. 196/2003 e successive modifiche (Codice in materia di protezione dei dati personali, come aggiornato dal D.Lgs. 101/2018)
+- L. 300/1970 (Statuto dei Lavoratori), art. 4, come modificato dal D.Lgs. 151/2015
+- Garante privacy: Linee guida cookie e altri strumenti di tracciamento (10 giugno 2021); elenco delle tipologie di trattamenti soggetti a valutazione d'impatto (provv. 467 dell'11 ottobre 2018)
 
-## 11. Storico revisioni del documento
+## 11. Adempimenti del Titolare
+
+Questo documento descrive il software e i trattamenti che rende possibili. Per essere in regola l'Azienda deve inoltre:
+
+| # | Adempimento | Stato |
+|---|---|---|
+| 1 | Inserire nel **registro dei trattamenti** aziendale (art. 30 GDPR) le voci del § 9 | da fare |
+| 2 | Dare agli utenti dell'app l'**informativa** (art. 13 GDPR e art. 4, comma 3, Statuto dei Lavoratori) — modello in `documentazione/modelli-privacy.md` | da fare |
+| 3 | Se il portale remoto è usato da **tecnici esterni** (altre aziende), informarli con lo stesso modello, perché il loro nome arriva nei pacchetti `.df` | se applicabile |
+| 4 | Autorizzare e istruire chi usa l'app e accede alla cartella di rete (art. 29 GDPR, art. 2-quaterdecies Codice): basta l'accesso già regolato dai permessi Windows e una riga nelle istruzioni al personale | da verificare |
+| 5 | Definire per quanto conservare l'Excel "master" e gli allegati (§ 6) nelle politiche documentali | da fare |
+| 6 | Microsoft Store: come *URL informativa sulla privacy* indicare la pagina privacy del sito aziendale, integrata con la sezione sull'app (modello in `documentazione/modelli-privacy.md`). Questo documento non riporta di proposito la ragione sociale e i contatti del Titolare, che un'informativa deve contenere | da fare |
+| 7 | **Valutazione d'impatto (DPIA)**: valutazione preliminare negativa. Il trattamento è su piccola scala, riguarda dati comuni (username, nome dell'operatore), non prevede profilazione né decisioni automatizzate e non ha lo scopo di controllare l'attività dei dipendenti. Rientrerebbe nella tipologia n. 5 dell'elenco del Garante (controllo a distanza dell'attività dei dipendenti) solo se gli audit trail venissero usati per quello scopo. Conservare questa valutazione con il registro | fatto (da confermare da chi segue la privacy in azienda) |
+
+Non servono: consenso degli interessati (§ 4), banner cookie (§ 5.1), contratti ex art. 28 con fornitori (§ 2), nomina di un DPO per questo solo trattamento (art. 37 GDPR: non è un trattamento su larga scala né di categorie particolari).
+
+## 12. Storico revisioni del documento
 
 | Versione | Data | Descrizione |
 |---|---|---|
@@ -115,6 +145,7 @@ Gli interessati (gli operatori i cui username compaiono negli audit trail) posso
 | 1.1 | 2026-09-26 | Backup locali spostati nei Documenti; distribuzione tramite Microsoft Store (MSIX, pubblico privato); token anti-CSRF-locale esteso a `POST /upload` |
 | 1.2 | 2026-09-26 | Controllo dell'intestazione Host (DNS rebinding); `/local-file` limitato ai file trascinati (rischio residuo chiuso); test automatici delle route e delle pagine in CI |
 | 1.3 | 2026-09-26 | Librerie dell'interfaccia incluse nell'app (nessuna richiesta al CDN jsDelivr); descrizione del portale remoto; Content-Security-Policy |
+| 1.4 | 2026-09-26 | Statuto dei Lavoratori (§ 4.1), cookie e archiviazione locale (§ 5.1), adempimenti del Titolare e valutazione preliminare DPIA (§ 11) |
 
 ---
 

@@ -36,5 +36,10 @@ jobs:
         run: npm ci
 
       # Il test delle pagine usa Google Chrome già presente sui runner GitHub.
+      # PORTALE_TERMINI_RISERVATI (secret del repository, parole separate da
+      # virgola): nomi che non devono mai comparire nei file del repository
+      # pubblico (vedi test/dati-riservati.test.js).
       - name: Test
+        env:
+          PORTALE_TERMINI_RISERVATI: ${{ secrets.PORTALE_TERMINI_RISERVATI }}
         run: npm test

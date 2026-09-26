@@ -5,8 +5,8 @@
 | Workflow | Quando | Cosa fa |
 |---|---|---|
 | **Build** (`build.yml`) | ogni PR e push su `main`; tag `v*` | Su Windows: `npm audit` (bloccante sulle vulnerabilità alte), `server.exe` con pkg, setup NSIS, test delle route sul `server.exe` impacchettato, SBOM, pacchetto MSIX; su `main`, Release automatica |
-| **Test** (`test.yml`) | ogni PR e push su `main` | `npm test` su Windows e Linux (unità, route HTTP, pagine in Chrome headless) |
-| **CodeQL** (`codeql.yml`) | ogni PR e push su `main`, e ogni lunedì | Analisi statica di sicurezza del codice JavaScript e dei workflow; risultati in *Security > Code scanning* |
+| **Test** (`test.yml`) | ogni PR e push su `main` | `npm test` su Windows e Linux (unità, route HTTP, pagine in Chrome headless, assenza di dati riservati nei file) |
+| **CodeQL** (`codeql.yml`) | ogni PR e push su `main` | Analisi statica di sicurezza del codice JavaScript e dei workflow; risultati in *Security > Code scanning*. Saltata se il repository è privato (servirebbe GitHub Advanced Security) |
 | **Dependabot** (`dependabot.yml`) | una volta al mese | Una PR raggruppata per npm e una per Cargo |
 
 Ogni build carica un artifact `portale-commissioning-<pr o ramo>` con setup, pacchetti MSIX (Store e test) e SBOM.

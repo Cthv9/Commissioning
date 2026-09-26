@@ -6,7 +6,8 @@
 
 - **CRA**: con l'uso attuale (strumento interno, distribuito solo ad account aziendali) il software, secondo questa lettura, **non rientra** nel Cyber Resilience Act. Rientrerebbe se venisse fornito ad altre aziende o a clienti nell'ambito dell'attività commerciale, anche gratis.
 - Le misure principali che il CRA chiede ai prodotti che vi rientrano sono comunque **già adottate come buona pratica**: SBOM a ogni rilascio, gestione delle vulnerabilità, aggiornamenti automatici, sicurezza di default. Se lo scenario cambia, il lavoro rimanente è soprattutto documentale.
-- Restano **decisioni per il titolare** (sezione in fondo): licenza del codice su repository pubblico, alcune impostazioni di GitHub, firma del setup.
+- Il **codice è proprietario** (file `LICENSE`): è visibile solo perché il repository deve essere pubblico per GitHub Pages. Restano alcune **decisioni per il titolare** (sezione in fondo): visibilità del repository, impostazioni di GitHub, firma del setup.
+- Privacy, informativa e cookie: vedi il [documento privacy](../docs/compliance/privacy-e-trattamento-dati.md), § 11, e i [modelli pronti](modelli-privacy.md).
 
 ## Quadro normativo
 
@@ -44,7 +45,7 @@ Confronto con i requisiti essenziali del CRA (allegato I), adottati come buona p
 
 | Requisito | Misura |
 |---|---|
-| Nessuna vulnerabilità nota sfruttabile al rilascio | `npm audit` bloccante in CI sulle vulnerabilità alte; Dependabot mensile (npm e Cargo) e avvisi di sicurezza; analisi statica **CodeQL** su ogni PR e ogni settimana |
+| Nessuna vulnerabilità nota sfruttabile al rilascio | `npm audit` bloccante in CI sulle vulnerabilità alte; Dependabot mensile (npm e Cargo) e avvisi di sicurezza; analisi statica **CodeQL** su ogni PR e su `main` |
 | Sicuro per impostazione predefinita | Server raggiungibile solo dal PC stesso (`127.0.0.1`), controllo dell'Host, token su tutte le scritture; nessuna porta aperta in rete |
 | Riservatezza e integrità dei dati | `/local-file` solo per i file trascinati; JSON non attendibile letto senza prototype pollution; nomi file ripuliti ed estensioni ammesse in lista chiusa; Content-Security-Policy |
 | Minimizzazione dei dati | Unico dato personale: lo username di Windows negli audit trail (documento privacy) |
@@ -56,9 +57,13 @@ Confronto con i requisiti essenziali del CRA (allegato I), adottati come buona p
 
 ## Decisioni per il titolare
 
-1. **Licenza del codice.** Il repository è **pubblico** e `package.json` dichiara la licenza **ISC**, il valore predefinito di npm. Con ISC chiunque può copiare e riusare il codice. Le strade sono due:
-   - codice aziendale riservato: licenza `UNLICENSED` con nota di copyright, e valutare di rendere privato il repository (GitHub Pages da repository privato richiede un piano a pagamento);
-   - codice volutamente open source: aggiungere un file `LICENSE` esplicito.
+1. **Repository pubblico.** Il codice è proprietario (`LICENSE`, `package.json` con licenza `UNLICENSED`), ma resta *leggibile* da chiunque, **storia dei commit compresa**. Ciò che è stato tolto dai file resta visibile nei commit vecchi, e cancellarlo riscrivendo la storia non è affidabile: GitHub conserva i riferimenti delle PR, e chi ha già scaricato il repository ne ha una copia. Le strade per rendere il codice davvero non leggibile, senza perdere il portale remoto:
+   - **repository privato + piano GitHub Pro** (4 $/mese circa): con Pro, Pages funziona anche da repository privato e la pagina resta pubblica. Nessuna modifica al codice. Con un repository privato CodeQL si disattiva da solo (richiede un servizio a pagamento), e i minuti di GitHub Actions diventano limitati (3.000 al mese con Pro; le build Windows contano il doppio);
+   - **repository privato gratuito + piccolo repository pubblico solo per il portale**: il portale (`docs/`) si pubblica da un repository separato che contiene solo quei file. Si può automatizzare con un token da creare nelle impostazioni.
+
+   In ogni caso, nelle impostazioni dell'account GitHub (*Settings > Emails*), attivare **Keep my email addresses private**: i commit fatti dal sito (merge delle PR) useranno un indirizzo anonimo invece dell'email personale.
+
+   Per evitare che in futuro finiscano nel repository dati aziendali, `test/dati-riservati.test.js` blocca la CI se un file contiene percorsi di rete, indirizzi email o una delle parole riservate indicate nel secret del repository `PORTALE_TERMINI_RISERVATI` (per esempio nome dell'azienda, dei server, dei clienti, separati da virgola). La lista sta in un secret e non nel codice, altrimenti sarebbe pubblica.
 2. **Impostazioni GitHub** (*Settings > Code security*):
    - attivare **Private vulnerability reporting**, necessario per la procedura di `SECURITY.md`;
    - verificare che **Dependabot alerts** e **Secret scanning** siano attivi.

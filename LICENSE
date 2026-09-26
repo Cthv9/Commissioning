@@ -1,0 +1,23 @@
+Portale Commissioning
+Copyright (c) 2026 Cthv9. Tutti i diritti riservati. All rights reserved.
+
+Il codice sorgente di questo repository è visibile pubblicamente solo perché
+il repository ospita la pagina del portale remoto su GitHub Pages. La
+visibilità NON concede alcuna licenza: è vietato copiare, modificare,
+distribuire, pubblicare, concedere in sublicenza o usare in qualsiasi forma,
+in tutto o in parte, il codice e la documentazione di questo repository senza
+autorizzazione scritta del titolare.
+
+The source code in this repository is publicly visible only because the
+repository hosts the remote portal page on GitHub Pages. Visibility does NOT
+grant any license: copying, modifying, distributing, publishing, sublicensing
+or using the code and documentation of this repository, in whole or in part,
+in any form, is prohibited without the owner's written permission.
+
+Componenti di terze parti / Third-party components
+Le librerie di terze parti incluse (ad esempio Bootstrap, JSZip, Chart.js,
+jsPDF) e le dipendenze npm e Rust restano soggette alle rispettive licenze,
+riportate nei loro file e nello SBOM allegato a ogni Release.
+Bundled third-party libraries (e.g. Bootstrap, JSZip, Chart.js, jsPDF) and the
+npm and Rust dependencies remain under their own licenses, included in their
+files and listed in the SBOM attached to every Release.

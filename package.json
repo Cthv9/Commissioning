@@ -1,6 +1,7 @@
 {
   "name": "portale-commissioning",
   "version": "3.6.0",
+  "private": true,
   "description": "Portale Commissioning",
   "scripts": {
     "dev:server": "node server.js",
@@ -16,7 +17,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "dependencies": {
     "adm-zip": "^0.6.1",
     "bootstrap": "5.3.3",
