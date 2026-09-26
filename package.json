@@ -11,14 +11,17 @@
     "tauri:build": "npm run pkg:server && npm run build:sidecar && tauri build --config src-tauri/tauri.prod.conf.json",
     "rebuild:excel": "node rebuild_excel.js",
     "import:df": "node import_df.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "sync-assets": "node scripts/sync-assets.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "adm-zip": "^0.6.1",
+    "bootstrap": "5.3.3",
     "express": "^5.2.1",
+    "jszip": "3.10.1",
     "multer": "^2.4.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },

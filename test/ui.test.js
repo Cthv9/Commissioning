@@ -6,7 +6,7 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { startServer } = require('./helpers/server');
+const { startServer, startStaticServer, ROOT } = require('./helpers/server');
 
 let chromium;
 try {
@@ -45,7 +45,8 @@ async function newPage() {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  page.on('dialog', (d) => d.accept());
+  // Il popup può chiudersi da solo con la navigazione prima che venga accettato.
+  page.on('dialog', (d) => d.accept().catch(() => {}));
   // Violazioni della Content-Security-Policy: arrivano solo come errori in console.
   page.on('console', (m) => {
     if (m.type() === 'error' && /Content Security Policy/i.test(m.text())) errors.push(m.text());
@@ -112,17 +113,6 @@ test('pagine: primo avvio, nuovo record, archivio', async (t) => {
   await page.locator('#exportPdfBtn').click();
   assert.match((await pdf).suggestedFilename(), /\.pdf$/, 'export PDF');
 
-  // Portale remoto servito dall'app: genera un pacchetto .df (JSZip).
-  await page.goto(`${B}/slave.html`);
-  await page.fill('#cantiere', 'ACME');
-  await page.fill('#nomeBarca', 'Pressa 2');
-  await page.fill('#numeroScafo', 'M-02');
-  await page.fill('#operatore', 'Anna');
-  await page.setInputFiles('#fileInput', { name: 'foto.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('jpeg') });
-  const df = page.waitForEvent('download');
-  await page.locator('#generateBtn').click();
-  assert.match((await df).suggestedFilename(), /\.df$/, 'pacchetto .df');
-
   await page.goto(`${B}/manage.html`);
   await page.locator('button[data-action="delete"]').first().waitFor({ timeout: 10000 });
   await page.locator('button[data-action="delete"]').first().click();
@@ -132,4 +122,69 @@ test('pagine: primo avvio, nuovo record, archivio', async (t) => {
   assert.equal((await delResp).status(), 200, 'DELETE /records/:id');
 
   assert.deepEqual(errors, [], 'nessun errore JavaScript nelle pagine');
+});
+
+test('portale remoto (GitHub Pages): profilo, funzionamento offline, .df importabile nell\'app', async (t) => {
+  if (skipReason) return t.skip(skipReason);
+  const web = await startStaticServer(path.join(ROOT, 'docs'));
+  t.after(() => web.stop());
+
+  // Senza ?profilo= e senza scelta memorizzata: prima si sceglie il reparto.
+  const fresh = await browser.newContext();
+  const first = await fresh.newPage();
+  await first.goto(`${web.base}/index.html`);
+  await first.locator('#profileChooser').waitFor({ state: 'visible' });
+  assert.ok(!(await first.locator('#portal').isVisible()), 'modulo nascosto finché non si sceglie il reparto');
+  await first.locator('#profileOptions button', { hasText: 'Navale' }).click();
+  assert.equal(await first.locator('[data-label="entita"]').innerText(), 'Cantiere');
+  await fresh.close();
+
+  const ctx = await browser.newContext({ acceptDownloads: true });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Content Security Policy/i.test(m.text())) errors.push(m.text());
+  });
+  page.on('request', (r) => {
+    if (/^https?:/.test(r.url()) && !r.url().startsWith(web.base)) errors.push(`richiesta esterna: ${r.url()}`);
+  });
+
+  // Link per reparto (es. QR code): etichette e valori Tipo del profilo Industriale.
+  await page.goto(`${web.base}/index.html?profilo=industriale`);
+  assert.equal(await page.locator('[data-label="entita"]').innerText(), 'Costruttore');
+  assert.equal(await page.locator('[data-label="asset"]').innerText(), 'Nome Macchina');
+  assert.deepEqual(await page.locator('#tipo option').allInnerTexts(), ['Avviamento', 'Commissioning', 'Collaudo']);
+
+  // Offline: dopo la prima visita il portale funziona senza rete (service worker).
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+  await ctx.setOffline(true);
+  await page.reload();
+  assert.equal(await page.locator('[data-label="entita"]').innerText(), 'Costruttore', 'profilo ricordato offline');
+
+  await page.fill('#cantiere', 'ACME');
+  await page.fill('#nomeBarca', 'Pressa 9');
+  await page.fill('#numeroScafo', 'M-09');
+  await page.selectOption('#tipo', 'Collaudo');
+  await page.fill('#operatore', 'Tecnico');
+  await page.setInputFiles('#fileInput', { name: 'foto.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('jpeg') });
+  const download = page.waitForEvent('download');
+  await page.locator('#generateBtn').click();
+  const dfPath = path.join(srv.dir, (await download).suggestedFilename());
+  await (await download).saveAs(dfPath);
+  await ctx.close();
+
+  // Il pacchetto generato offline si importa nell'app.
+  const fd = new FormData();
+  fd.append('dfFile', new Blob([fs.readFileSync(dfPath)]), path.basename(dfPath));
+  const preview = await fetch(`${srv.base}/preview-df`, { method: 'POST', headers: { 'X-Portale-Client': srv.token }, body: fd });
+  assert.equal(preview.status, 200, await preview.clone().text());
+  const { recordData, filesCount } = await preview.json();
+  assert.equal(recordData['Nome Barca'], 'Pressa 9');
+  assert.equal(recordData.Tipo, 'Collaudo');
+  assert.equal(filesCount, 1);
+
+  assert.deepEqual(errors, [], 'nessun errore né risorsa esterna nel portale remoto');
 });

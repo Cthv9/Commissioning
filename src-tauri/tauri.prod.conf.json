@@ -13,7 +13,6 @@
       "dist/nuovo.html": "nuovo.html",
       "dist/rebuild_excel.js": "rebuild_excel.js",
       "dist/script.js": "script.js",
-      "dist/slave.html": "slave.html",
       "dist/ui-common.js": "ui-common.js"
     }
   }
