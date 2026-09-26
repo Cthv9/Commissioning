@@ -1,0 +1,40 @@
+name: Test
+
+# Test automatici su ogni PR e push su main: unit test, route HTTP con il
+# server avviato su cartelle temporanee e pagine in Chrome headless.
+# La build Windows (build.yml) verifica che l'app si compili; questi
+# verificano che le funzioni rispondano.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows è la piattaforma dell'app (percorsi, nomi file);
+        # Linux dà un secondo riscontro più rapido.
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Il test delle pagine usa Google Chrome già presente sui runner GitHub.
+      - name: Test
+        run: npm test
