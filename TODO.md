@@ -18,6 +18,7 @@
 
 - [ ] Valutare rinomina profonda dei nomi di campo interni (oggi solo il layer di visualizzazione è parametrizzato per dominio, i nomi interni/colonne restano storici per compatibilità)
 - [ ] Valutare upgrade `multer` 1.x → 2.x con test manuale upload dedicato (Dependabot configurato per non riproporlo in automatico)
+- [ ] Valutare upgrade `express` 4.x → 5.x con test manuale delle route (`res.status()` diventa più severo, nuova sintassi wildcard delle route via path-to-regexp, `body-parser` v2; la CI impacchetta il server ma non chiama le route HTTP, quindi non lo verifica — Dependabot configurato per non riproporlo in automatico, PR #46 chiusa per questo motivo)
 - [ ] Valutare redesign con token dedicato per l'endpoint `/local-file` (oggi mitigato dal guard anti-CSRF-locale condiviso)
 - [ ] Verificare su una macchina Windows reale che i due installer (Navale/Industriale) prodotti dalla CI si comportino correttamente: nome prodotto/identifier distinti, `PORTALE_DOMAIN_PROFILE` effettivamente "cotto" nel binario (controllare le etichette UI all'avvio senza alcuna variabile d'ambiente impostata manualmente), e che possano coesistere sulla stessa macchina se mai installati entrambi per test
 
