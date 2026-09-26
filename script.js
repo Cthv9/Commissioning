@@ -186,8 +186,10 @@ document.getElementById('uploadForm').addEventListener('submit', async (event) =
       formData.append('files[]', f);
     }
 
+    const token = await window.dfGetAppToken();
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/upload', true);
+    xhr.setRequestHeader('X-Portale-Client', token);
 
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) {

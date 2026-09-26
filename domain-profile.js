@@ -33,7 +33,6 @@ const PROFILES = {
     },
     tipoOptions: ['Avviamento', 'Commissioning', 'Primo Commissioning', 'Claim'],
     defaultExcelFileName: 'Barche_Commissionate.xlsx',
-    defaultBackupDirName: 'PortaleCommissioningBackup',
     excelHeaders: BASE_EXCEL_HEADERS,
   },
   industriale: {
@@ -49,7 +48,6 @@ const PROFILES = {
     },
     tipoOptions: ['Avviamento', 'Commissioning', 'Collaudo'],
     defaultExcelFileName: 'Commissioning_IND.xlsx',
-    defaultBackupDirName: 'PortaleCommissioningBackup_Industriale',
     excelHeaders: BASE_EXCEL_HEADERS,
   },
 };
@@ -62,9 +60,30 @@ function listProfileIds() {
   return Object.keys(PROFILES);
 }
 
+function normalizeProfileId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return PROFILES[id] ? id : null;
+}
+
+/**
+ * Il profilo si sceglie una sola volta al primo avvio. Un valore preimpostato
+ * dall'IT (variabile d'ambiente PORTALE_DOMAIN_PROFILE) ha la precedenza e
+ * salta la domanda; altrimenti vale la scelta salvata in settings.json.
+ * `null` = non ancora scelto.
+ */
+function resolveDomainProfileId({ envValue, settingsValue } = {}) {
+  const fromEnv = normalizeProfileId(envValue);
+  if (fromEnv) return { id: fromEnv, source: 'env' };
+  const fromSettings = normalizeProfileId(settingsValue);
+  if (fromSettings) return { id: fromSettings, source: 'settings' };
+  return { id: null, source: null };
+}
+
 module.exports = {
   PROFILES,
   BASE_EXCEL_HEADERS,
   getProfile,
   listProfileIds,
+  normalizeProfileId,
+  resolveDomainProfileId,
 };
