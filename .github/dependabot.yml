@@ -17,6 +17,12 @@ updates:
       # allegati (follow-up tracciato in TODO.md): non proporlo in automatico.
       - dependency-name: "multer"
         update-types: ["version-update:semver-major"]
+      # express 5.x ha breaking change reali (res.status() più severo, nuova
+      # sintassi delle route path-to-regexp, body-parser v2) che la CI non
+      # esercita (impacchetta il server, non chiama le route HTTP): richiede
+      # test manuale dedicato (follow-up in TODO.md), non va proposto in automatico.
+      - dependency-name: "express"
+        update-types: ["version-update:semver-major"]
       # Tauri rifiuta di buildare se @tauri-apps/api (npm) e il crate `tauri`
       # (cargo) non sono sulla stessa major.minor: npm e cargo sono ecosystem
       # separati, quindi una minor bumpata da un lato solo rompe sempre la build.
