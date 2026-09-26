@@ -27,6 +27,7 @@ npm install
 `npm test` esegue tutti i file `test/*.test.js` con il test runner di Node:
 
 - **unità**: profili, migrazione dei backup, parsing sicuro del JSON, allineamento dei file generati;
+- **dati riservati** (`dati-riservati.test.js`): il repository è pubblico, quindi nei file non devono comparire percorsi di rete, indirizzi email o le parole riservate elencate nella variabile `PORTALE_TERMINI_RISERVATI` (in CI arriva dall'omonimo secret del repository). Nei file usare solo segnaposto, per esempio `\\Server\Share`;
 - **route HTTP** (`http-routes.test.js`): avvia il server vero su una porta libera e su cartelle temporanee, poi prova upload, archivio, import `.df`, impostazioni e protezioni (token, Host, `/local-file`, intestazioni di sicurezza);
 - **pagine** (`ui.test.js`): Chrome headless tramite `playwright-core`. Prova il primo avvio, il nuovo record, l'Archivio, la dashboard con l'export PDF, e il portale remoto, anche offline, col pacchetto generato importato nell'app. Fallisce anche per errori JavaScript, violazioni della Content-Security-Policy e richieste verso internet.
 

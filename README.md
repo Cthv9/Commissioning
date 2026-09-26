@@ -33,6 +33,11 @@ Il portale remoto è pubblicato su GitHub Pages; il link per reparto è in [docu
 | [Sviluppo](documentazione/sviluppo.md) | Sviluppo: prerequisiti, comandi, test, file generati, variabili d'ambiente |
 | [Build e rilascio](documentazione/build-e-rilascio.md) | Sviluppo: CI, rilascio di una versione, Microsoft Store |
 | [Sicurezza e Cyber Resilience Act](documentazione/sicurezza-e-cra.md) | Titolare e compliance: norme applicabili, misure in atto, decisioni aperte |
-| [Privacy e trattamento dati](docs/compliance/privacy-e-trattamento-dati.md) | Titolare e compliance: informativa e registro dei trattamenti |
+| [Privacy e trattamento dati](docs/compliance/privacy-e-trattamento-dati.md) | Titolare e compliance: dati trattati, cookie, Statuto dei Lavoratori, adempimenti (§ 11) |
+| [Modelli privacy](documentazione/modelli-privacy.md) | Titolare: informativa per gli utenti, sezione per il sito (Microsoft Store), voce del registro dei trattamenti |
 | [Segnalare una vulnerabilità](SECURITY.md) | Chiunque |
 | [TODO](TODO.md) | Attività aperte |
+
+## Licenza
+
+Software proprietario, tutti i diritti riservati: vedi [LICENSE](LICENSE). Il repository è pubblico solo per ospitare il portale remoto su GitHub Pages; questo non concede alcun diritto di uso del codice.

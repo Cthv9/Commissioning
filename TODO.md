@@ -27,8 +27,11 @@
 
 ### Ancora aperti (a cura del titolare)
 
-- [ ] Decidere la licenza del codice: repository pubblico con licenza ISC (predefinita di npm) in `package.json` — vedi `documentazione/sicurezza-e-cra.md`, "Decisioni per il titolare"
+- [ ] **Repository pubblico**: il codice è proprietario (`LICENSE`), ma la storia dei commit resta leggibile. Scegliere tra repository privato + GitHub Pro (Pages continua a funzionare) e repository privato + repository pubblico solo per il portale — dettagli in `documentazione/sicurezza-e-cra.md`, "Decisioni per il titolare"
+- [ ] GitHub, *Settings > Emails* dell'account: attivare *Keep my email addresses private*, così i merge fatti dal sito non espongono l'email personale
+- [ ] GitHub, *Settings > Secrets and variables > Actions*: creare il secret `PORTALE_TERMINI_RISERVATI` con le parole da non pubblicare mai (nome dell'azienda, server, clienti…, separate da virgola)
 - [ ] GitHub, *Settings > Code security*: attivare *Private vulnerability reporting* (serve a `SECURITY.md`), verificare *Dependabot alerts* e *Secret scanning*
+- [ ] Privacy (documento privacy § 11): voce nel registro dei trattamenti, informativa agli utenti e sezione sul sito aziendale per il Microsoft Store — modelli in `documentazione/modelli-privacy.md`
 - [ ] Setup NSIS non firmato (avviso SmartScreen): certificato di firma del codice, oppure distribuzione solo tramite Store
 - [ ] Distribuire ai tecnici i link del portale remoto per reparto (`?profilo=navale` / `?profilo=industriale`, anche come QR code)
 - [ ] Provare su Windows il pacchetto MSIX di test (artifact della build: `*-test.msix` + `*-test.cer`, istruzioni in `documentazione/build-e-rilascio.md`): avvio del server, schermata di primo avvio, share di rete, drag&drop, backup in `Documenti\Portale Commissioning\backup` e copia automatica da una vecchia installazione (AppData)
