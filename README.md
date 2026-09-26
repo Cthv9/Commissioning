@@ -98,7 +98,7 @@ Il pacchetto MSIX per il Microsoft Store si crea dopo la build, su Windows con i
 ./scripts/build-msix.ps1   # crea msix-out/*-store.msix, *-test.msix e *-test.cer
 ```
 
-In CI (`.github/workflows/build.yml`) la build parte su ogni PR e push su `main`. Sui tag `v*` la GitHub Release contiene il setup NSIS e il pacchetto `*-store.msix`.
+In CI (`.github/workflows/build.yml`) la build parte su ogni PR e push su `main`. **Per rilasciare basta alzare `version` in `package.json` e fare il merge su `main`**: se la versione non ha ancora il suo tag, la build crea il tag `v<versione>` e la GitHub Release con il setup NSIS e il pacchetto `*-store.msix`. (Anche un tag `v*` pushato a mano crea la Release.)
 
 ## Distribuzione tramite Microsoft Store
 
@@ -109,7 +109,7 @@ Passi una tantum (solo il titolare dell'account può farli):
 1. Registrarsi come sviluppatore su [Partner Center](https://partner.microsoft.com/dashboard) (account aziendale) e **riservare il nome** dell'app.
 2. In *Gestione prodotto > Identità prodotto* copiare `Package/Identity/Name`, `Package/Identity/Publisher` e `Package/Properties/PublisherDisplayName`.
 3. Nel repository GitHub (*Settings > Secrets and variables > Actions > Variables*) creare le variabili `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_DISPLAY_NAME` con quei valori, e `MSIX_DISPLAY_NAME` con il nome riservato. Senza queste variabili la CI crea il pacchetto con valori di test, validi per provarlo ma non accettati dallo Store.
-4. Aumentare `version` in `package.json` (lo Store richiede una versione più alta a ogni invio), creare e pushare il tag `v<versione>`, e scaricare `*-store.msix` dalla Release.
+4. Aumentare `version` in `package.json` (lo Store richiede una versione più alta a ogni invio) e fare il merge su `main`: la build crea la Release `v<versione>`, da cui scaricare `*-store.msix`.
 5. In Partner Center creare l'invio: caricare il `.msix` in *Pacchetti*, e in *Prezzi e disponibilità > Visibilità* scegliere **Pubblico privato**, indicando email o gruppi aziendali autorizzati.
 6. Nella scheda dell'app, come *URL informativa sulla privacy*, indicare il link al documento [`docs/compliance/privacy-e-trattamento-dati.md`](docs/compliance/privacy-e-trattamento-dati.md) su GitHub (o la sua copia sul sito aziendale). Partner Center lo richiede per le app che trattano dati personali, qui lo username di Windows negli audit trail.
 
