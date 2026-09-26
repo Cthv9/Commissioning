@@ -1,6 +1,8 @@
 version: 2
 updates:
   # Una sola PR raggruppata per ecosystem (npm, cargo) invece di una PR per pacchetto.
+  # Anche le major arrivano in automatico: il workflow Test (route HTTP e pagine)
+  # le verifica sulla PR prima del merge.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -13,16 +15,6 @@ updates:
         applies-to: security-updates
         patterns: ["*"]
     ignore:
-      # multer 2.x è un breaking change che richiede un test manuale dell'upload
-      # allegati (follow-up tracciato in TODO.md): non proporlo in automatico.
-      - dependency-name: "multer"
-        update-types: ["version-update:semver-major"]
-      # express 5.x ha breaking change reali (res.status() più severo, nuova
-      # sintassi delle route path-to-regexp, body-parser v2) che la CI non
-      # esercita (impacchetta il server, non chiama le route HTTP): richiede
-      # test manuale dedicato (follow-up in TODO.md), non va proposto in automatico.
-      - dependency-name: "express"
-        update-types: ["version-update:semver-major"]
       # Tauri rifiuta di buildare se @tauri-apps/api (npm) e il crate `tauri`
       # (cargo) non sono sulla stessa major.minor: npm e cargo sono ecosystem
       # separati, quindi una minor bumpata da un lato solo rompe sempre la build.

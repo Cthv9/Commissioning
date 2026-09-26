@@ -51,6 +51,13 @@ jobs:
       - name: Build installer (sidecar + Tauri)
         run: npm run tauri:build
 
+      # Stessi test delle route del workflow Test, ma sul server.exe impacchettato
+      # da pkg: verifica che il binario distribuito contenga tutto il necessario.
+      - name: Test del server impacchettato
+        env:
+          PORTALE_TEST_SERVER_EXE: server-dist/server.exe
+        run: node --test test/http-routes.test.js
+
       - name: Build pacchetto MSIX (Microsoft Store)
         shell: pwsh
         # I valori reali vengono da Partner Center > Identità prodotto, salvati come

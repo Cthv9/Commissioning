@@ -38,7 +38,12 @@ async function startServer(extraEnv = {}) {
     ...extraEnv,
   });
 
-  const child = spawn(process.execPath, [path.join(ROOT, 'server.js')], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  // PORTALE_TEST_SERVER_EXE: prova il server impacchettato (server.exe della
+  // build) invece di server.js, con gli stessi test.
+  const exe = process.env.PORTALE_TEST_SERVER_EXE;
+  const child = exe
+    ? spawn(path.resolve(exe), [], { cwd: path.dirname(path.resolve(exe)), env, stdio: ['ignore', 'pipe', 'pipe'] })
+    : spawn(process.execPath, [path.join(ROOT, 'server.js')], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
   child.stdout.on('data', (d) => { output += d; });
   child.stderr.on('data', (d) => { output += d; });

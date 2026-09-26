@@ -193,6 +193,29 @@ test('import .df: anteprima e importazione, senza prototype pollution', async ()
   assert.equal((await api('/preview-df', { method: 'POST', body: wrong })).status, 400);
 });
 
+test('impostazioni, opzioni, ricostruzione Excel, annullamento import', async () => {
+  const settings = await (await fetch(srv.base + '/settings')).json();
+  assert.equal(settings.domainProfile, 'industriale');
+  assert.equal(settings.version, require('../package.json').version);
+
+  const options = await (await fetch(srv.base + '/options')).json();
+  assert.deepEqual(options.cantieri, ['ACME']);
+
+  assert.equal((await api('/admin/rebuild-excel', { token: null, method: 'POST' })).status, 403);
+  const rebuild = await api('/admin/rebuild-excel', { method: 'POST' });
+  assert.equal(rebuild.status, 200, await rebuild.clone().text());
+  assert.equal((await rebuild.json()).rows, 2);
+
+  const cancel = await json('/cancel-df-import', 'POST', { tempFile: '../../settings.json' });
+  assert.equal(cancel.status, 200);
+  assert.ok(fs.existsSync(path.join(srv.backupDir, 'settings.json')), 'nessun file fuori dalla cartella temporanea');
+
+  assert.equal((await json('/settings/uploads-root', 'POST', { uploadsRootDir: '' })).status, 400);
+  const root = await json('/settings/uploads-root', 'POST', { uploadsRootDir: srv.dataDir });
+  assert.equal(root.status, 200);
+  assert.equal((await root.json()).uploadsRootDir, srv.dataDir);
+});
+
 test('/local-file: solo file trascinati, registrati dalla shell, una volta', async () => {
   const file = path.join(srv.dir, 'trascinato.txt');
   fs.writeFileSync(file, 'contenuto');
