@@ -62,11 +62,17 @@ function requestWithHost(host, pathname) {
   });
 }
 
-test('le pagine vengono servite', async () => {
-  for (const page of ['/index.html', '/nuovo.html', '/manage.html', '/dashboard.html', '/ui-common.js']) {
+test('le pagine vengono servite, con le intestazioni di sicurezza', async () => {
+  for (const page of ['/index.html', '/nuovo.html', '/manage.html', '/dashboard.html', '/ui-common.js', '/bootstrap.min.css']) {
     const res = await fetch(srv.base + page);
     assert.equal(res.status, 200, page);
   }
+  const res = await fetch(srv.base + '/index.html');
+  const csp = res.headers.get('content-security-policy');
+  assert.match(csp, /default-src 'self'/);
+  assert.match(csp, /frame-ancestors 'none'/);
+  assert.doesNotMatch(csp, /https:/, 'nessuna origine esterna ammessa');
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
 });
 
 test('Host estraneo rifiutato (DNS rebinding), localhost accettato', async () => {

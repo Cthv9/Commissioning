@@ -17,9 +17,6 @@ try {
 const executablePath = process.env.PORTALE_TEST_CHROMIUM || undefined;
 const launchOptions = executablePath ? { executablePath } : { channel: 'chrome' };
 
-// Solo per ambienti senza accesso a cdn.jsdelivr.net: cartella `dist` di Bootstrap 5.
-const bootstrapDir = process.env.PORTALE_TEST_BOOTSTRAP_DIR;
-
 let srv;
 let browser;
 let skipReason = false;
@@ -49,18 +46,15 @@ async function newPage() {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('dialog', (d) => d.accept());
-  if (bootstrapDir) {
-    await page.route('https://cdn.jsdelivr.net/**', (route) => {
-      const url = route.request().url();
-      if (url.endsWith('bootstrap.bundle.min.js')) {
-        return route.fulfill({ path: path.join(bootstrapDir, 'js/bootstrap.bundle.min.js'), contentType: 'application/javascript' });
-      }
-      if (url.endsWith('bootstrap.min.css')) {
-        return route.fulfill({ path: path.join(bootstrapDir, 'css/bootstrap.min.css'), contentType: 'text/css' });
-      }
-      return route.fulfill({ status: 404, body: '' });
-    });
-  }
+  // Violazioni della Content-Security-Policy: arrivano solo come errori in console.
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Content Security Policy/i.test(m.text())) errors.push(m.text());
+  });
+  // Nessuna risorsa da internet: tutto deve arrivare dal server locale.
+  page.on('request', (r) => {
+    const url = r.url();
+    if (/^https?:/.test(url) && !url.startsWith(srv.base)) errors.push(`richiesta esterna: ${url}`);
+  });
   return { page, errors };
 }
 
@@ -110,17 +104,32 @@ test('pagine: primo avvio, nuovo record, archivio', async (t) => {
   await page.locator('#saveEditBtn').click();
   assert.equal((await putResp).status(), 200, 'PUT /records/:id');
 
+  // Dashboard: grafici ed export PDF (jsPDF) con la Content-Security-Policy attiva.
+  await page.goto(`${B}/dashboard.html`);
+  await page.locator('#exportPdfBtn').waitFor();
   await page.waitForTimeout(500);
+  const pdf = page.waitForEvent('download');
+  await page.locator('#exportPdfBtn').click();
+  assert.match((await pdf).suggestedFilename(), /\.pdf$/, 'export PDF');
+
+  // Portale remoto servito dall'app: genera un pacchetto .df (JSZip).
+  await page.goto(`${B}/slave.html`);
+  await page.fill('#cantiere', 'ACME');
+  await page.fill('#nomeBarca', 'Pressa 2');
+  await page.fill('#numeroScafo', 'M-02');
+  await page.fill('#operatore', 'Anna');
+  await page.setInputFiles('#fileInput', { name: 'foto.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('jpeg') });
+  const df = page.waitForEvent('download');
+  await page.locator('#generateBtn').click();
+  assert.match((await df).suggestedFilename(), /\.df$/, 'pacchetto .df');
+
+  await page.goto(`${B}/manage.html`);
+  await page.locator('button[data-action="delete"]').first().waitFor({ timeout: 10000 });
   await page.locator('button[data-action="delete"]').first().click();
   await page.locator('#dfConfirmYesBtn').waitFor({ state: 'visible' });
   const delResp = page.waitForResponse((r) => r.request().method() === 'DELETE');
   await page.locator('#dfConfirmYesBtn').click();
   assert.equal((await delResp).status(), 200, 'DELETE /records/:id');
-
-  // Dashboard: si apre senza errori.
-  await page.goto(`${B}/dashboard.html`);
-  await page.waitForLoadState('load');
-  await page.waitForTimeout(500);
 
   assert.deepEqual(errors, [], 'nessun errore JavaScript nelle pagine');
 });

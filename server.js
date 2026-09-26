@@ -557,6 +557,28 @@ app.use((req, res, next) => {
   next();
 });
 
+// Le pagine usano solo file serviti da qui (librerie comprese): uno script
+// iniettato non può caricare codice esterno né inviare dati fuori dal PC.
+// Gli script inline restano ammessi perché le pagine li usano.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  // ipc: / ipc.localhost: canale IPC di Tauri (dialog di scelta cartella)
+  "connect-src 'self' ipc: http://ipc.localhost",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', CONTENT_SECURITY_POLICY);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
