@@ -76,6 +76,9 @@ npm install
 | `npm run tauri:build` | Build completa: pkg → sidecar → installer NSIS |
 | `npm run rebuild:excel` | Ricostruisce il file Excel dal backup snapshot |
 | `npm run import:df` | Importa un pacchetto `.df` (archivio allegati) |
+| `npm test` | Test automatici: unità, route HTTP (server avviato su cartelle temporanee) e pagine in Chrome headless |
+
+I test girano in CI (workflow `Test`, Windows e Linux) su ogni PR e push su `main`; la build Windows ripete i test delle route sul `server.exe` impacchettato. Il test delle pagine usa Google Chrome installato; in alternativa `PORTALE_TEST_CHROMIUM=<percorso di chrome/chromium>`. Senza browser il test viene saltato in locale, mai in CI.
 
 ## Build per la distribuzione
 

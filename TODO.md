@@ -17,15 +17,16 @@
 - [x] Pacchetto MSIX per il Microsoft Store generato in CI (`scripts/build-msix.ps1`), con copia firmata di test; backup locali spostati da AppData ai Documenti con migrazione automatica
 - [x] Archivio (`manage.html`) di nuovo funzionante: lo script si interrompeva al caricamento (`dfWirePageDfDrop` usata prima di caricare `ui-common.js`, dal PR #33) e modifica/eliminazione/apertura cartelle non inviavano il token anti-CSRF (dal PR #36); `POST /upload` ora protetto dal token come gli altri endpoint di scrittura
 
+- [x] Test automatici in CI delle route HTTP e delle pagine (Chrome headless), su Windows e Linux; la build ripete i test delle route sul `server.exe` impacchettato
+- [x] `express` 4 → 5.2 e `multer` 1 → 2.4, verificati dai test (Dependabot non esclude più le loro major)
+- [x] `/local-file` limitato ai file appena trascinati, registrati dalla shell Tauri con un segreto che la pagina non conosce; controllo dell'Host contro il DNS rebinding
+- [x] Release automatica: alzando `version` in `package.json` e facendo il merge su `main` la build crea tag e Release
+- [x] Rinomina profonda dei nomi di campo interni: **valutata, non si fa**. I nomi storici (`Cantiere`, `Nome Barca`, `Numero Scafo`, `Matricola`) sono le colonne dei file Excel già sulle share e le chiavi di `record.json` nei pacchetti `.df` prodotti dal portale remoto, che resta in cache offline sui telefoni dei tecnici anche nelle versioni vecchie. Rinominarli richiederebbe una migrazione degli Excel e la compatibilità con entrambi i formati `.df`, in cambio di sola leggibilità del codice. Il layer di etichette per profilo (`domain-profile.js`) copre già la differenza per l'utente
+
 ### Ancora aperti
 
-- [ ] Valutare rinomina profonda dei nomi di campo interni (oggi solo il layer di visualizzazione è parametrizzato per dominio, i nomi interni/colonne restano storici per compatibilità)
-- [ ] Valutare upgrade `multer` 1.x → 2.x con test manuale upload dedicato (Dependabot configurato per non riproporlo in automatico)
-- [ ] Valutare upgrade `express` 4.x → 5.x con test manuale delle route (`res.status()` diventa più severo, nuova sintassi wildcard delle route via path-to-regexp, `body-parser` v2; la CI impacchetta il server ma non chiama le route HTTP, quindi non lo verifica — Dependabot configurato per non riproporlo in automatico, PR #46 chiusa per questo motivo)
-- [ ] Valutare redesign con token dedicato per l'endpoint `/local-file` (oggi mitigato dal guard anti-CSRF-locale condiviso)
 - [ ] Provare su Windows il pacchetto MSIX di test (artifact della build: `*-test.msix` + `*-test.cer`, istruzioni nel README): avvio del server, schermata di primo avvio, share di rete, drag&drop, backup in `Documenti\Portale Commissioning\backup` e copia automatica da una vecchia installazione (AppData)
 - [ ] Microsoft Store (a cura del titolare dell'account): registrazione in Partner Center, nome riservato, variabili `MSIX_*` nel repository, primo invio con visibilità **Pubblico privato** — passi nel README, sezione "Distribuzione tramite Microsoft Store"
-- [ ] Aggiungere in CI un test automatico delle route HTTP e delle pagine (server avviato + browser headless): oggi la CI verifica che l'app si compili, non che le funzioni rispondano, ed è così che il blocco dell'Archivio è rimasto inosservato
 
 ### Nota manutenzione
 
