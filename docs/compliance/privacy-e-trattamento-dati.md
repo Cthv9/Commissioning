@@ -67,9 +67,15 @@ La pulizia dei file temporanei e delle copie Excel eccedenti avviene automaticam
 
 Il server Express è avviato con `app.listen(3000, '127.0.0.1', ...)`: accetta connessioni solo dallo stesso PC (loopback IPv4/IPv6), impedendo l'accesso da altri dispositivi in rete.
 
+Il server accetta inoltre solo richieste con intestazione `Host` pari a `127.0.0.1:3000` o `localhost:3000`. Questo blocca il *DNS rebinding*: un sito esterno che fa risolvere il proprio dominio in `127.0.0.1` diventerebbe "stessa origine" per il browser, ma le sue richieste portano il suo nome di dominio e vengono rifiutate.
+
 ### 7.2 Protezione anti-CSRF-locale sugli endpoint che modificano/eliminano dati
 
 Gli endpoint che creano, modificano o eliminano dati (incluso il caricamento di nuovi record e allegati, `POST /upload`, oltre alle impostazioni e all'endpoint di lettura file locale usato dal drag&drop) sono protetti da un middleware (`requireAppOrigin`) che richiede l'header `X-Portale-Client` con un token (`APP_TOKEN`) generato all'avvio del processo e recuperabile solo tramite `GET /app-token` dalla stessa applicazione. Non si tratta di un'autenticazione utente forte, ma di una misura che impedisce a una pagina web esterna eventualmente aperta nello stesso browser di invocare queste route in modo silenzioso (protezione da CSRF locale).
+
+### 7.2-bis Lettura dei file trascinati (`/local-file`)
+
+Il drag&drop nativo dell'app desktop legge i file dal disco tramite `/local-file`. L'endpoint serve **solo i file che l'utente ha appena trascinato nella finestra**: al momento del drop la shell Tauri comunica i percorsi al server, autorizzata da un segreto generato a ogni avvio che la pagina web non conosce. Ogni percorso è leggibile una sola volta ed entro due minuti. Anche una pagina compromessa non può quindi usare l'endpoint per leggere altri file del PC.
 
 ### 7.3 Libreria di elaborazione Excel aggiornata
 
@@ -78,7 +84,6 @@ La libreria di lettura/scrittura Excel (`xlsx`) è mantenuta a una versione aggi
 ### 7.4 Limiti noti e rischi residui accettati
 
 - **Assenza di login e di ruoli utente distinti**: chiunque abbia accesso al PC e alla share di rete può usare l'app con i permessi del proprio utente Windows; non esiste un sistema di autenticazione applicativa separato né una gestione di ruoli (es. operatore vs. amministratore). L'identificazione dell'operatore si basa sullo username di sistema operativo.
-- **Endpoint `/local-file`**: usato per il drag&drop nativo dell'app desktop (Tauri consegna solo i path dei file, la pagina ne recupera i byte da qui). È mitigato dal controllo dell'indirizzo di loopback e dal medesimo token applicativo (`APP_TOKEN`) del guard anti-CSRF-locale, ma non ha un token dedicato specifico per questo endpoint (valutazione di redesign già annotata come follow-up in `TODO.md`).
 - **Nessuna cifratura dei dati a riposo**: i file Excel, i backup JSON e gli allegati non sono cifrati; la protezione si basa sui permessi del filesystem e della share di rete aziendale.
 
 Questi limiti sono considerati rischi residui accettati dal Titolare in ragione del contesto di utilizzo (rete aziendale interna, accesso già circoscritto al personale autorizzato tramite i permessi di rete/dominio Windows esistenti), e sono monitorati per eventuali interventi futuri.
@@ -107,6 +112,7 @@ Gli interessati (gli operatori i cui username compaiono negli audit trail) posso
 |---|---|---|
 | 1.0 | 2026-09-24 | Prima redazione, contestuale al consolidamento navale/industriale |
 | 1.1 | 2026-09-26 | Backup locali spostati nei Documenti; distribuzione tramite Microsoft Store (MSIX, pubblico privato); token anti-CSRF-locale esteso a `POST /upload` |
+| 1.2 | 2026-09-26 | Controllo dell'intestazione Host (DNS rebinding); `/local-file` limitato ai file trascinati (rischio residuo chiuso); test automatici delle route e delle pagine in CI |
 
 ---
 

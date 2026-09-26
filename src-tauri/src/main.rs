@@ -8,6 +8,54 @@ use tauri_plugin_dialog::DialogExt;
 // Handle al processo server per terminarlo alla chiusura (solo produzione)
 struct ServerProcess(Mutex<Option<std::process::Child>>);
 
+// Segreto condiviso con il server (env PORTALE_SHELL_SECRET): autorizza solo la
+// shell, non la pagina, a indicare quali file sono stati trascinati.
+struct ShellSecret(String);
+
+fn shell_secret() -> String {
+    // In sviluppo il server è avviato da `tauri dev`: stesso segreto se impostato
+    // nell'ambiente, altrimenti il server resta nella modalità senza segreto.
+    if let Ok(s) = std::env::var("PORTALE_SHELL_SECRET") {
+        if !s.is_empty() {
+            return s;
+        }
+    }
+    // RandomState usa chiavi casuali del sistema operativo: 256 bit senza crate aggiuntivi.
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+    (0..4u64)
+        .map(|i| {
+            let mut h = RandomState::new().build_hasher();
+            h.write_u64(i);
+            format!("{:016x}", h.finish())
+        })
+        .collect()
+}
+
+// Registra sul server i path appena trascinati: /local-file servirà solo quelli.
+fn register_dropped_paths(secret: &str, paths: &[String]) -> bool {
+    use std::io::{Read, Write};
+    let body = serde_json::json!({ "paths": paths }).to_string();
+    let request = format!(
+        "POST /internal/dropped-paths HTTP/1.1\r\nHost: 127.0.0.1:3000\r\n\
+         Content-Type: application/json\r\nX-Portale-Shell: {}\r\n\
+         Content-Length: {}\r\nConnection: close\r\n\r\n{}",
+        secret,
+        body.len(),
+        body
+    );
+    let Ok(mut stream) = std::net::TcpStream::connect("127.0.0.1:3000") else {
+        return false;
+    };
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    if stream.write_all(request.as_bytes()).is_err() {
+        return false;
+    }
+    let mut response = String::new();
+    let _ = stream.read_to_string(&mut response);
+    response.starts_with("HTTP/1.1 200")
+}
+
 #[tauri::command]
 fn select_directory(app: AppHandle) -> Option<String> {
     app.dialog()
@@ -47,6 +95,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(ServerProcess(Mutex::new(None)))
+        .manage(ShellSecret(shell_secret()))
         .invoke_handler(tauri::generate_handler![select_directory])
         .setup(|app| {
             // In PRODUZIONE: avvia server.exe dalla resource directory
@@ -70,6 +119,7 @@ fn main() {
                         let mut cmd = std::process::Command::new(&server_path);
                         cmd.env("PORTALE_BACKUP_DIR", &backup_dir);
                         cmd.env("PORTALE_LEGACY_BACKUP_DIR", &legacy_backup_dir);
+                        cmd.env("PORTALE_SHELL_SECRET", &app.state::<ShellSecret>().0);
                         #[cfg(target_os = "windows")]
                         {
                             use std::os::windows::process::CommandExt;
@@ -160,7 +210,23 @@ fn main() {
                                 .iter()
                                 .map(|p| p.to_string_lossy().into_owned())
                                 .collect();
-                            Some(serde_json::json!({ "type": "drop", "paths": paths }))
+                            // Prima si registrano i path sul server, poi si avvisa la
+                            // pagina: in un thread, per non bloccare la finestra.
+                            let secret = window.state::<ShellSecret>().0.clone();
+                            if let Some(webview) = window.get_webview_window("main") {
+                                std::thread::spawn(move || {
+                                    if !register_dropped_paths(&secret, &paths) {
+                                        eprintln!("ERRORE: registrazione dei file trascinati non riuscita");
+                                    }
+                                    let payload = serde_json::json!({ "type": "drop", "paths": paths });
+                                    let js = format!(
+                                        "window.__dfNativeDragEvent && window.__dfNativeDragEvent({});",
+                                        payload
+                                    );
+                                    let _ = webview.eval(&js);
+                                });
+                            }
+                            None
                         }
                         // Over arriva di continuo durante il trascinamento: inutile
                         _ => None,

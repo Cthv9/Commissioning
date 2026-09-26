@@ -16,6 +16,14 @@ const { safeJsonParse } = require('./safe-json');
 // dalla stessa origine (vedi GET /app-token e middleware requireAppOrigin).
 const APP_TOKEN = crypto.randomBytes(24).toString('hex');
 
+// La porta resta 3000 per l'app (main.rs la attende lì); i test ne usano un'altra.
+const PORT = Number(process.env.PORTALE_PORT) || 3000;
+
+// Segreto condiviso con la shell Tauri (main.rs lo genera e lo passa qui via
+// env): autorizza solo la shell, mai la pagina, a indicare quali file l'utente
+// ha appena trascinato nella finestra (vedi /local-file).
+const SHELL_SECRET = process.env.PORTALE_SHELL_SECRET || '';
+
 /**
  * Percorso share (fonte ufficiale file + Excel)
  * Puoi sovrascriverlo con variabile ambiente PORTALE_ROOT_DIR se necessario.
@@ -508,6 +516,13 @@ const storage = multer.diskStorage({
   }
 });
 
+// Errore di validazione dell'input: l'handler finale risponde 400 con il messaggio.
+function badRequest(message) {
+  const err = new Error(message);
+  err.statusCode = 400;
+  return err;
+}
+
 const ALLOWED_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff', '.webp', '.heic',
   '.mp4', '.mov', '.m4v', '.avi', '.mkv', '.wmv', '.webm',
@@ -525,11 +540,22 @@ const upload = multer({
     if (ALLOWED_EXTENSIONS.has(ext)) {
       cb(null, true);
     } else {
-      cb(new Error(`Tipo file non consentito: ${ext}`));
+      cb(badRequest(`Tipo file non consentito: ${ext}`));
     }
   },
 });
 const app = express();
+
+// Anti DNS rebinding: un dominio esterno che si risolve in 127.0.0.1 diventa
+// "stessa origine" per il browser e potrebbe leggere /app-token. Il browser
+// però manda l'Host del dominio esterno, che qui viene rifiutato.
+const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
+app.use((req, res, next) => {
+  if (!ALLOWED_HOSTS.has(String(req.headers.host || '').toLowerCase())) {
+    return res.status(403).json({ error: 'Host non consentito.' });
+  }
+  next();
+});
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -634,9 +660,45 @@ app.post('/settings/uploads-root', requireAppOrigin, (req, res) => {
   res.json({ uploadsRootDir: next.uploadsRootDir });
 });
 
+function sameSecret(value, secret) {
+  const a = Buffer.from(String(value || ''));
+  const b = Buffer.from(secret);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// Path trascinati nella finestra, registrati dalla shell Tauri al momento del
+// drop: /local-file serve solo questi, una volta sola e per poco tempo.
+const DROP_GRANT_TTL_MS = 2 * 60 * 1000;
+const droppedPathGrants = new Map(); // path assoluto -> scadenza (ms)
+
+app.post('/internal/dropped-paths', (req, res) => {
+  if (!SHELL_SECRET || !sameSecret(req.header('X-Portale-Shell'), SHELL_SECRET)) {
+    return res.status(403).json({ error: 'Richiesta non autorizzata.' });
+  }
+  const now = Date.now();
+  for (const [p, exp] of droppedPathGrants) if (exp < now) droppedPathGrants.delete(p);
+  const paths = Array.isArray(req.body && req.body.paths) ? req.body.paths : [];
+  let count = 0;
+  for (const p of paths.slice(0, 1000)) {
+    if (typeof p !== 'string' || !p) continue;
+    droppedPathGrants.set(path.resolve(p), now + DROP_GRANT_TTL_MS);
+    count++;
+  }
+  res.json({ ok: true, count });
+});
+
+function consumeDropGrant(filePath) {
+  const key = path.resolve(filePath);
+  const exp = droppedPathGrants.get(key);
+  droppedPathGrants.delete(key);
+  return Boolean(exp && exp >= Date.now());
+}
+
 /**
  * Lettura file locale per il drag&drop nativo dell'app desktop: Tauri consegna
- * solo i path, la pagina recupera i byte da qui. Solo richieste loopback.
+ * solo i path, la pagina recupera i byte da qui. Solo richieste loopback, con
+ * il token della pagina, e (con la shell Tauri) solo per i file appena
+ * trascinati: una pagina compromessa non può leggere file arbitrari del PC.
  */
 app.get('/local-file', (req, res) => {
   const filePath = req.query.path ? String(req.query.path) : '';
@@ -649,6 +711,12 @@ app.get('/local-file', (req, res) => {
   if (req.header('X-Portale-Client') !== APP_TOKEN) {
     console.log(`[local-file] path="${filePath}" esito=403 (header mancante/non valido)`);
     return res.status(403).json({ error: 'Richiesta non autorizzata.' });
+  }
+  // Senza segreto (solo `npm run dev:server` senza la shell) resta il vecchio
+  // comportamento: token della pagina + loopback.
+  if (SHELL_SECRET && (!filePath || !consumeDropGrant(filePath))) {
+    console.log(`[local-file] path="${filePath}" esito=403 (file non trascinato)`);
+    return res.status(403).json({ error: 'File non trascinato nella finestra.' });
   }
 
   let stat;
@@ -753,11 +821,13 @@ app.put('/records/:id', requireAppOrigin, requireDomainProfile, (req, res) => {
 
   const oldRecord = baseRecords[recordIndex];
 
+  // Express 5: req.body è undefined se la richiesta non ha un corpo JSON
+  const body = req.body || {};
   // Applica solo i campi modificabili — impedisce che req.body sovrascriva ID o Data
   const EDITABLE_FIELDS = ['Cantiere', 'Nome Barca', 'Numero Scafo', 'Matricola', 'Tipo', 'Operatore'];
   const updated = { ...oldRecord };
   for (const key of EDITABLE_FIELDS) {
-    if (key in req.body) updated[key] = String(req.body[key] ?? '').trim();
+    if (key in body) updated[key] = String(body[key] ?? '').trim();
   }
 
   // Normalizza cantiere/operatore/tipo in base a valori esistenti
@@ -805,7 +875,7 @@ app.put('/records/:id', requireAppOrigin, requireDomainProfile, (req, res) => {
   saveMeta(meta);
 
   const fullRecords = attachMeta(baseRecords);
-  persistBackup('update', { id: updated.ID, patch: req.body }, fullRecords);
+  persistBackup('update', { id: updated.ID, patch: body }, fullRecords);
 
   res.json({ message: 'Record aggiornato con successo', updatedRecord: fullRecords[recordIndex] });
 });
@@ -967,7 +1037,7 @@ const dfUpload = multer({
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext === '.df') return cb(null, true);
-    cb(new Error('Solo file .df sono accettati per l\'importazione.'));
+    cb(badRequest('Solo file .df sono accettati per l\'importazione.'));
   },
 });
 
@@ -1191,14 +1261,19 @@ const staticDir = process.pkg ? path.dirname(process.execPath) : __dirname;
 app.use(express.static(staticDir));
 
 app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError || (err && err.message && err.message.startsWith('Tipo file'))) {
+  if (err instanceof multer.MulterError || (err && err.statusCode === 400)) {
     return res.status(400).json({ error: err.message });
   }
   console.error('Unhandled server error:', err);
   res.status(500).json({ error: 'Errore interno del server' });
 });
 
-app.listen(3000, '127.0.0.1', () => {
+// Express 5 passa qui l'errore di avvio (es. porta occupata) invece di emetterlo.
+app.listen(PORT, '127.0.0.1', (err) => {
+  if (err) {
+    console.error(`Impossibile avviare il server sulla porta ${PORT}:`, err.message);
+    process.exit(1);
+  }
   if (!process.env.PORTALE_ROOT_DIR) {
     console.warn(
       '\n[CONFIGURAZIONE RICHIESTA] La variabile d\'ambiente PORTALE_ROOT_DIR non è impostata.\n' +
@@ -1206,7 +1281,7 @@ app.listen(3000, '127.0.0.1', () => {
       'il file Barche_Commissionate.xlsx, oppure configura il percorso nelle Impostazioni.\n'
     );
   }
-  console.log('Server avviato su http://127.0.0.1:3000/index.html');
+  console.log(`Server avviato su http://127.0.0.1:${PORT}/index.html`);
   cleanupBackupArtifacts();
   setInterval(cleanupBackupArtifacts, 6 * 60 * 60 * 1000); // ogni 6 ore
 });
